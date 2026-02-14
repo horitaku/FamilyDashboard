@@ -89,6 +89,24 @@ npm run build
 
 ビルド後は `frontend/dist` をバックエンドが配信します。
 
+## Docker（Raspberry Pi 5 デプロイ）
+
+Raspberry Pi 5 上では Docker で起動する想定です。
+データ永続化のために `data` をボリュームでマウントします。
+
+### 想定構成
+- コンテナ: Go/Gin サーバー
+- 静的ファイル: `frontend/dist` をコンテナへ含める
+- データ永続化: `./data` をコンテナの `/app/data` にマウント
+
+### 予定コマンド（後で整備）
+
+```bash
+docker compose up -d --build
+```
+
+Dockerfile と docker-compose.yml はステップ11で作成します。
+
 ## API（予定）
 - GET /api/status
 - GET /api/calendar
