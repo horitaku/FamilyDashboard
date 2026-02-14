@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	httproutes "github.com/rihow/FamilyDashboard/internal/http"
+	"github.com/rihow/FamilyDashboard/internal/services/weather"
 )
 
 // main はGinサーバーのエントリーポイントなのです。
@@ -25,12 +27,19 @@ func main() {
 	fmt.Printf("   カレンダー更新間隔: %v\n", cfg.GetRefreshInterval("calendar"))
 	fmt.Printf("   タスク更新間隔: %v\n", cfg.GetRefreshInterval("tasks"))
 
+	// キャッシュを初期化するます
+	fc := cache.New("./data/cache")
+
+	// 天気APIクライアントを初期化するます
+	weatherClient := weather.NewClient(fc, "http://localhost:8080")
+
 	// Ginルーターを初期化
 	router := gin.Default()
 
-	// グローバルミドルウェアで設定をコンテキストに保存するます。
+	// グローバルミドルウェアで設定・クライアントをコンテキストに保存するます。
 	router.Use(func(ctx *gin.Context) {
 		ctx.Set("config", cfg)
+		ctx.Set("weather", weatherClient)
 		ctx.Next()
 	})
 

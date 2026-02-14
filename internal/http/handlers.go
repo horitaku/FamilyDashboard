@@ -1,11 +1,14 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
+	"github.com/rihow/FamilyDashboard/internal/services/weather"
 )
 
 // ============================================================================
@@ -139,32 +142,63 @@ func GetTasks(ctx *gin.Context) {
 // ============================================================================
 
 // GetWeather は /api/weather のGETハンドラーなのです。
-// 現在の天候・今日の気温・降水確率・警報を返すもなのです（いまはダミーデータ）。
+// 現在の天候・今日の気温・降水確率・警報を返すもなのです。
+// 設定から都市名を取得して、weather クライアントで Open-Meteo API から
+// 気象庁データを含む最新の天気情報を取得するます。
 func GetWeather(ctx *gin.Context) {
-	response := models.WeatherResponse{
-		Location: "姫路市",
-		Current: models.CurrentWeather{
-			Temperature: 15.3,
-			Condition:   "晴",
-			Icon:        "01d",
-			Humidity:    65,
-			WindSpeed:   3.5,
-		},
-		Today: models.TodayWeather{
-			MaxTemp: 20.0,
-			MinTemp: 10.5,
-			Summary: "晴の一日",
-		},
-		PrecipSlots: []models.PrecipSlot{
-			{Time: "09:00", Precip: 0},
-			{Time: "12:00", Precip: 5},
-			{Time: "15:00", Precip: 10},
-			{Time: "18:00", Precip: 0},
-			{Time: "21:00", Precip: 0},
-		},
-		// ダミーの警報（通常は空）
-		Alerts: []models.WeatherAlert{},
+	// コンテキストから設定と weather クライアントを取得するます
+	cfgRaw, exists := ctx.Get("config")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "設定が見つからないです",
+		})
+		return
+	}
+	cfg := cfgRaw.(*config.Config)
+
+	weatherRaw, exists := ctx.Get("weather")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "天気クライアントが見つかりません",
+		})
+		return
+	}
+	weatherClient := weatherRaw.(*weather.Client)
+
+	// 設定から都市名と国を取得するます
+	cityName := cfg.Location.CityName
+	if cityName == "" {
+		cityName = "姫路市" // デフォルト都市
+	}
+	country := cfg.Location.Country
+	if country == "" {
+		country = "JP" // デフォルト国コード
 	}
 
-	ctx.JSON(http.StatusOK, response)
+	// 天気データを取得するます（キャッシュから または API から）
+	weatherRsp, err := weatherClient.GetWeather(ctx, cityName, country)
+	if err != nil {
+		// エラーが発生した場合、ログに出力してダミーデータを返します
+		fmt.Printf("❌ 天気データ取得エラー: %v\n", err)
+		ctx.JSON(http.StatusOK, &models.WeatherResponse{
+			Location: cityName,
+			Current: models.CurrentWeather{
+				Temperature: 0,
+				Condition:   "データ取得失敗",
+				Icon:        "04u",
+				Humidity:    0,
+				WindSpeed:   0,
+			},
+			Today: models.TodayWeather{
+				MaxTemp: 0,
+				MinTemp: 0,
+				Summary: "データ取得失敗",
+			},
+			PrecipSlots: []models.PrecipSlot{},
+			Alerts:      []models.WeatherAlert{},
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, weatherRsp)
 }

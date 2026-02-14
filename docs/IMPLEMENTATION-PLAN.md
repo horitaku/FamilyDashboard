@@ -10,8 +10,8 @@
 - [x] 2. バックエンドAPIの基礎
 - [x] 3. キャッシュ機構の実装
 - [x] 4. 設定管理
-- [ ] 5. ジオコーディング（Nominatim）
-- [ ] 6. 天気APIクライアント
+- [x] 5. ジオコーディング（Nominatim）
+- [x] 6. 天気APIクライアント
 - [ ] 7. Googleカレンダー/タスクAPIクライアント
 - [ ] 8. APIエラー・オフライン対応
 - [ ] 9. フロントエンド（Svelte）実装
@@ -30,7 +30,7 @@
 | 3. キャッシュ | アーニャ | 2026-02-14 | 2026-02-14 | 完了 | JSONファイルキャッシュの読み書き、TTL判定、削除機能を実装 |
 | 4. 設定管理 | アーニャ | 2026-02-14 | 2026-02-14 | 完了 | Config構造体、LoadConfig、Validate実装。main.goに統合。テスト完了 |
 | 5. ジオコーディング | アーニャ | 2026-02-14 | 2026-02-14 | 完了 | Nominatim APIクライアント実装、URLエンコード対応、キャッシュ機能、テスト完了（姫路市座標取得OK） |
-| 6. 天気API | | | | | |
+| 6. 天気API | アーニャ | 2026-02-14 | 2026-02-14 | 完了 | Open-Meteo APIクライアント実装、気象庁データ対応、キャッシュ機能、ハンドラー統合、テスト完了 |
 | 7. GoogleAPI | | | | | |
 | 8. エラー対応 | | | | | |
 | 9. フロント実装 | | | | | |
@@ -106,11 +106,21 @@
 - 完了条件: ダミーAPIで天気データ取得・キャッシュ動作を確認するます
 - 実施内容:
   - weatherパッケージ作成
-  - 天気APIクライアント雛形実装（プロバイダは後で決定）
-  - データ取得・キャッシュ保存
+  - Open-Meteo APIクライアント実装（気象庁データを含む）
+  - ジオコーディング機能（緯度経度から天気予報取得）
   - today, current, precipSlots, alertsの構造設計
-  - テスト: ダミーAPIで取得・キャッシュ動作確認
-- 進捗: 
+  - WMO天気コード→日本語変換機能実装
+  - ハンドラーに統合（GetWeather）
+  - テスト実装完了（変換テスト、構造体テスト）
+- 進捗: 完了！✨
+  - weather.go: Client構造体、NewClient、GetWeather、fetchFromOpenMeteo実装
+  - getCoordinates: Open-Meteo geocoding API で都市→座標取得
+  - convertToWeatherResponse: Open-Meteo→models.WeatherResponse 変換
+  - weatherCodeToCondition: WMO天気コード→日本語（晴/曇/雨/雪など）
+  - weatherCodeToIcon: WMO天気コード→アイコンコード（01d/02d/03d など）
+  - キャッシュTTL: 5分で設定（設定で変更可能）
+  - テスト結果: 全PASS（変換テスト、コード→条件テスト、アイコンテスト）
+  - handlers.go統合: GetWeatherハンドラーにログ出力・エラー処理追加
 
 ### 7. Googleカレンダー/タスクAPIクライアント
 - 目的: GoogleAPIからデータ取得・サーバー側ソートを実装するます
