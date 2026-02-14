@@ -107,20 +107,22 @@
 - 実施内容:
   - weatherパッケージ作成
   - Open-Meteo APIクライアント実装（気象庁データを含む）
-  - ジオコーディング機能（緯度経度から天気予報取得）
+  - ジオコーディング機能（都市名→座標）
   - today, current, precipSlots, alertsの構造設計
   - WMO天気コード→日本語変換機能実装
   - ハンドラーに統合（GetWeather）
   - テスト実装完了（変換テスト、構造体テスト）
 - 進捗: 完了！✨
   - weather.go: Client構造体、NewClient、GetWeather、fetchFromOpenMeteo実装
-  - getCoordinates: Open-Meteo geocoding API で都市→座標取得
+  - initCityCoordinates: 主要都市の座標をマップに登録（ハードコード方式）
+  - getCoordinates: 内部マップから座標を取得（外部API依存なし）
   - convertToWeatherResponse: Open-Meteo→models.WeatherResponse 変換
   - weatherCodeToCondition: WMO天気コード→日本語（晴/曇/雨/雪など）
   - weatherCodeToIcon: WMO天気コード→アイコンコード（01d/02d/03d など）
   - キャッシュTTL: 5分で設定（設定で変更可能）
   - テスト結果: 全PASS（変換テスト、コード→条件テスト、アイコンテスト）
   - handlers.go統合: GetWeatherハンドラーにログ出力・エラー処理追加
+  - 実環境テスト完了: Open-Meteo API から実データ取得成功、気温・天況・降水確率を正しく取得確認✓
 
 ### 7. Googleカレンダー/タスクAPIクライアント
 - 目的: GoogleAPIからデータ取得・サーバー側ソートを実装するます

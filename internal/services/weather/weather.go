@@ -13,13 +13,15 @@ import (
 )
 
 // Client は天気APIクライアントなのです。
-// 気象庁データまたはOpen-Meteo APIを使用して天気情報を取得するます。
+// Open-Meteo APIを使用して天気情報を取得するます。
 type Client struct {
-	// 気象庁パラメーター機能
 	baseURL    string
 	httpClient *http.Client
 	fc         *cache.FileCache // キャッシュ機能
-	geocodeURL string           // ジオコーディング情報を取得するバックエンド URL (例: http://localhost:8080)
+
+	// 都市ごとの座標マップ（ジオコーディング結果をキャッシしたもの）
+	// 形式: "城市名" -> {lat, lon}
+	cityCoords map[string]*geocodeResult
 }
 
 // OpenMeteoWeatherResponse は Open-Meteo API のレスポンス構造体なのです。
@@ -66,7 +68,22 @@ func NewClient(fc *cache.FileCache, geocodeURL string) *Client {
 			Timeout: 10 * time.Second,
 		},
 		fc:         fc,
-		geocodeURL: geocodeURL,
+		cityCoords: initCityCoordinates(),
+	}
+}
+
+// initCityCoordinates は 都市名 -> 座標 のマップを初期化するます。
+// 主要城市の座標データをハードコードするます。
+func initCityCoordinates() map[string]*geocodeResult {
+	return map[string]*geocodeResult{
+		"姫路市": {Latitude: 34.815353, Longitude: 134.685479}, // 兵庫県姫路市
+		"東京":  {Latitude: 35.6762, Longitude: 139.6503},     // 東京都
+		"大阪":  {Latitude: 34.6937, Longitude: 135.5023},     // 大阪府大阪市
+		"京都":  {Latitude: 35.0116, Longitude: 135.7681},     // 京都府京都市
+		"神戸":  {Latitude: 34.6901, Longitude: 135.1955},     // 兵庫県神戸市
+		"名古屋": {Latitude: 35.1815, Longitude: 136.9066},     // 愛知県名古屋市
+		"福岡":  {Latitude: 33.5904, Longitude: 130.4017},     // 福岡県福岡市
+		"札幌":  {Latitude: 43.0642, Longitude: 141.3469},     // 北海道札幌市
 	}
 }
 
@@ -107,49 +124,16 @@ func (c *Client) GetWeather(ctx context.Context, cityName, country string) (*mod
 	return weatherRsp, nil
 }
 
-// getCoordinates はバックエンドのジオコーディング機能を使って緯度経度を取得するます。
+// getCoordinates は都市の座標情報を取得するます。
+// 内部マップから取得するため、外部APIに依存しません。
 func (c *Client) getCoordinates(ctx context.Context, cityName, country string) (*geocodeResult, error) {
-	// バックエンドの /api/geocode エンドポイントを呼ぶます
-	// ここではシンプルに直接 Open-Meteo の geocoding API を使うこともできるます
-	url := fmt.Sprintf("https://geocoding-api.open-meteo.com/v1/search?name=%s&country=%s&count=1&language=ja",
-		cityName, country)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("リクエスト作成失敗するます: %w", err)
+	// 都市名から座標を検索するます
+	coords, ok := c.cityCoords[cityName]
+	if !ok {
+		return nil, fmt.Errorf("都市 '%s' は設定に登録されていません", cityName)
 	}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("APIリクエスト失敗するます: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("APIレスポンスエラー: code=%d, body=%s", resp.StatusCode, string(body))
-	}
-
-	var result struct {
-		Results []struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-			Name      string  `json:"name"`
-		} `json:"results"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("レスポンスパース失敗するます: %w", err)
-	}
-
-	if len(result.Results) == 0 {
-		return nil, fmt.Errorf("都市 %s が見つからないます", cityName)
-	}
-
-	return &geocodeResult{
-		Latitude:  result.Results[0].Latitude,
-		Longitude: result.Results[0].Longitude,
-	}, nil
+	return coords, nil
 }
 
 // fetchFromOpenMeteo は Open-Meteo API から天気データを取得するます。
@@ -165,6 +149,9 @@ func (c *Client) fetchFromOpenMeteo(ctx context.Context, lat, lon float64, cityN
 	if err != nil {
 		return nil, fmt.Errorf("リクエスト作成失敗するます: %w", err)
 	}
+
+	// User-Agent を設定するます
+	req.Header.Set("User-Agent", "FamilyDashboard/1.0 (https://github.com/rihow/FamilyDashboard; personal-use)")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
