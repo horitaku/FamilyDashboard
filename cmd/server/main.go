@@ -1,30 +1,24 @@
 package main
 
 import (
-    "net/http"
-
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
+	httproutes "github.com/rihow/FamilyDashboard/internal/http"
 )
 
-// main はGinサーバーのエントリーポイントです。
-// いまは雛形として最低限のルーティングと静的配信だけを用意しています。
+// main はGinサーバーのエントリーポイントなのです。
+// APIルーティングと静的ファイル配信を設定して、起動するもなのです。
 func main() {
-    router := gin.Default()
+	router := gin.Default()
 
-    // ヘルスチェック用の最小エンドポイントです。
-    router.GET("/api/health", func(ctx *gin.Context) {
-        ctx.JSON(http.StatusOK, gin.H{
-            "ok": true,
-        })
-    })
+	// APIルートの設定（internal/httpで定義したルートを登録）
+	httproutes.SetupRoutes(router)
+	router.Static("/assets", "./frontend/dist/assets")
 
-    // Svelteの静的ビルドを配信する前提のパスです。
-    // 実際のビルドは後のステップで実行します。
-    router.Static("/assets", "./frontend/dist/assets")
-    router.NoRoute(func(ctx *gin.Context) {
-        ctx.File("./frontend/dist/index.html")
-    })
+	// ルートへのアクセスはindex.htmlを返す（SPA対応）
+	router.NoRoute(func(ctx *gin.Context) {
+		ctx.File("./frontend/dist/index.html")
+	})
 
-    // 既定ポートで起動します（必要に応じて設定で差し替えます）。
-    _ = router.Run(":8080")
+	// 既定ポート8080で起動するます（必要に応じて設定で差し替えます）。
+	_ = router.Run(":8080")
 }
