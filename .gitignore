@@ -1,0 +1,29 @@
+# .gitignore
+node_modules/
+.cache/
+frontend/node_modules/
+frontend/dist/
+bin/
+dist/
+coverage/
+*.log
+*.tmp
+*.temp
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Vite
+frontend/.vite/
