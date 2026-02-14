@@ -1,14 +1,38 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"os"
+
 	"github.com/gin-gonic/gin"
+	"github.com/rihow/FamilyDashboard/internal/config"
 	httproutes "github.com/rihow/FamilyDashboard/internal/http"
 )
 
 // main はGinサーバーのエントリーポイントなのです。
-// APIルーティングと静的ファイル配信を設定して、起動するもなのです。
+// 設定読み込み → APIルーティング → 静的ファイル配信 → サーバー起動 の順で処理するます。
 func main() {
+	// 設定ファイルを読み込むます。
+	configFilePath := "./data/settings.json"
+	cfg, err := config.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("設定ファイルの読み込みに失敗しました: %v", err)
+	}
+
+	fmt.Printf("✨ 設定を読み込みました: %s\n", cfg.GetLocationString())
+	fmt.Printf("   天気更新間隔: %v\n", cfg.GetRefreshInterval("weather"))
+	fmt.Printf("   カレンダー更新間隔: %v\n", cfg.GetRefreshInterval("calendar"))
+	fmt.Printf("   タスク更新間隔: %v\n", cfg.GetRefreshInterval("tasks"))
+
+	// Ginルーターを初期化
 	router := gin.Default()
+
+	// グローバルミドルウェアで設定をコンテキストに保存するます。
+	router.Use(func(ctx *gin.Context) {
+		ctx.Set("config", cfg)
+		ctx.Next()
+	})
 
 	// APIルートの設定（internal/httpで定義したルートを登録）
 	httproutes.SetupRoutes(router)
@@ -16,9 +40,21 @@ func main() {
 
 	// ルートへのアクセスはindex.htmlを返す（SPA対応）
 	router.NoRoute(func(ctx *gin.Context) {
-		ctx.File("./frontend/dist/index.html")
+		// indexファイルが存在しない場合は、エラーのみ返す（後でhosted filesになる予定）
+		indexFile := "./frontend/dist/index.html"
+		if _, err := os.Stat(indexFile); err == nil {
+			ctx.File(indexFile)
+		} else {
+			ctx.JSON(404, gin.H{
+				"error": "index.html not found. Frontend build required.",
+			})
+		}
 	})
 
-	// 既定ポート8080で起動するます（必要に応じて設定で差し替えます）。
-	_ = router.Run(":8080")
+	// 既定ポート8080で起動するます。
+	port := ":8080"
+	fmt.Printf("🚀 サーバー起動するます！ http://localhost%s\n", port)
+	if err := router.Run(port); err != nil {
+		log.Fatalf("サーバー起動に失敗しました: %v", err)
+	}
 }
