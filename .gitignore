@@ -24,6 +24,8 @@ Thumbs.db
 *.out
 go.work
 go.work.sum
+server
+server.exe
 
 # Vite
 frontend/.vite/
