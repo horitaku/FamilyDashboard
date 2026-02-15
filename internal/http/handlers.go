@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
 	"github.com/rihow/FamilyDashboard/internal/services/google"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
+	"github.com/rihow/FamilyDashboard/internal/status"
 )
 
 // ============================================================================
@@ -20,20 +22,36 @@ import (
 // 現在の状態・エラー・各ソースの最終更新時刻を返すもなのです。
 func GetStatus(ctx *gin.Context) {
 	// 現在時刻を取得する（Asia/Tokyo）
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := status.NowRFC3339()
 
-	// ダミーのエラーリスト（いまは空）
+	// エラーリストを取得するのです（記録が無い場合は空）
 	errors := []models.ErrorInfo{}
+	if store := getErrorStore(ctx); store != nil {
+		errors = store.List()
+	}
 
-	// ダミーの最終更新時刻
-	lastUpdated := models.LastUpdatedTimes{
-		Weather:  time.Now().UTC().Add(-5 * time.Minute).Format(time.RFC3339),
-		Calendar: time.Now().UTC().Add(-3 * time.Minute).Format(time.RFC3339),
-		Tasks:    time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
+	// キャッシュの最終更新時刻を集計するのです
+	lastUpdated := models.LastUpdatedTimes{}
+	if fc := getCache(ctx); fc != nil {
+		cfg := getConfig(ctx)
+		cityName := "姫路市"
+		country := "JP"
+		if cfg != nil {
+			if cfg.Location.CityName != "" {
+				cityName = cfg.Location.CityName
+			}
+			if cfg.Location.Country != "" {
+				country = cfg.Location.Country
+			}
+		}
+
+		lastUpdated.Weather = readFetchedAt(fc, fmt.Sprintf("weather:%s:%s", country, cityName))
+		lastUpdated.Calendar = readFetchedAt(fc, "google_calendar_events")
+		lastUpdated.Tasks = readFetchedAt(fc, "google_tasks_items")
 	}
 
 	response := models.StatusResponse{
-		OK:          true,
+		OK:          len(errors) == 0,
 		Now:         now,
 		Errors:      errors,
 		LastUpdated: lastUpdated,
@@ -73,12 +91,18 @@ func GetCalendar(ctx *gin.Context) {
 	calendarResp, err := googleClient.GetCalendarEvents(ctx)
 	if err != nil {
 		fmt.Printf("❌ カレンダーデータ取得エラー: %v\n", err)
+		setSourceError(ctx, "calendar", err)
+		if calendarResp != nil {
+			ctx.JSON(http.StatusOK, calendarResp)
+			return
+		}
 		ctx.JSON(http.StatusOK, &models.CalendarResponse{
 			Days: []models.CalendarDay{},
 		})
 		return
 	}
 
+	clearSourceError(ctx, "calendar")
 	ctx.JSON(http.StatusOK, calendarResp)
 }
 
@@ -107,12 +131,18 @@ func GetTasks(ctx *gin.Context) {
 	tasksResp, err := googleClient.GetTaskItems(ctx)
 	if err != nil {
 		fmt.Printf("❌ タスクデータ取得エラー: %v\n", err)
+		setSourceError(ctx, "tasks", err)
+		if tasksResp != nil {
+			ctx.JSON(http.StatusOK, tasksResp)
+			return
+		}
 		ctx.JSON(http.StatusOK, &models.TasksResponse{
 			Items: []models.TaskItem{},
 		})
 		return
 	}
 
+	clearSourceError(ctx, "tasks")
 	ctx.JSON(http.StatusOK, tasksResp)
 }
 
@@ -157,8 +187,13 @@ func GetWeather(ctx *gin.Context) {
 	// 天気データを取得するます（キャッシュから または API から）
 	weatherRsp, err := weatherClient.GetWeather(ctx, cityName, country)
 	if err != nil {
-		// エラーが発生した場合、ログに出力してダミーデータを返します
+		// エラーが発生した場合、ログに出力してキャッシュを優先するます
 		fmt.Printf("❌ 天気データ取得エラー: %v\n", err)
+		setSourceError(ctx, "weather", err)
+		if weatherRsp != nil {
+			ctx.JSON(http.StatusOK, weatherRsp)
+			return
+		}
 		ctx.JSON(http.StatusOK, &models.WeatherResponse{
 			Location: cityName,
 			Current: models.CurrentWeather{
@@ -179,7 +214,67 @@ func GetWeather(ctx *gin.Context) {
 		return
 	}
 
+	clearSourceError(ctx, "weather")
 	ctx.JSON(http.StatusOK, weatherRsp)
+}
+
+func getCache(ctx *gin.Context) *cache.FileCache {
+	cacheRaw, exists := ctx.Get("cache")
+	if !exists {
+		return nil
+	}
+	fc, ok := cacheRaw.(*cache.FileCache)
+	if !ok {
+		return nil
+	}
+	return fc
+}
+
+func getConfig(ctx *gin.Context) *config.Config {
+	cfgRaw, exists := ctx.Get("config")
+	if !exists {
+		return nil
+	}
+	cfg, ok := cfgRaw.(*config.Config)
+	if !ok {
+		return nil
+	}
+	return cfg
+}
+
+func getErrorStore(ctx *gin.Context) *status.ErrorStore {
+	storeRaw, exists := ctx.Get("errorStore")
+	if !exists {
+		return nil
+	}
+	store, ok := storeRaw.(*status.ErrorStore)
+	if !ok {
+		return nil
+	}
+	return store
+}
+
+func setSourceError(ctx *gin.Context, source string, err error) {
+	if err == nil {
+		return
+	}
+	if store := getErrorStore(ctx); store != nil {
+		store.Set(source, err.Error())
+	}
+}
+
+func clearSourceError(ctx *gin.Context, source string) {
+	if store := getErrorStore(ctx); store != nil {
+		store.Clear(source)
+	}
+}
+
+func readFetchedAt(fc *cache.FileCache, cacheKey string) string {
+	entry, exists, _, err := fc.Read(cacheKey, 0)
+	if err != nil || !exists {
+		return ""
+	}
+	return entry.FetchedAt
 }
 
 // ============================================================================

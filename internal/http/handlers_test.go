@@ -2,20 +2,125 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rihow/FamilyDashboard/internal/cache"
+	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
+	"github.com/rihow/FamilyDashboard/internal/services/google"
+	"github.com/rihow/FamilyDashboard/internal/services/weather"
+	"github.com/rihow/FamilyDashboard/internal/status"
 )
 
-func setupTestRouter() *gin.Engine {
+func setupTestRouter(t *testing.T) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+
+	cfg := &config.Config{
+		RefreshIntervals: config.RefreshIntervals{
+			WeatherSec:  300,
+			CalendarSec: 300,
+			TasksSec:    300,
+		},
+		Location: config.Location{
+			CityName: "姫路市",
+			Country:  "JP",
+		},
+	}
+
+	fc := cache.New(t.TempDir())
+	seedCache(t, fc, cfg)
+
+	weatherClient := weather.NewClient(fc, "http://localhost:8080")
+	googleClient := google.NewClient(fc, cfg)
+	errorStore := status.NewErrorStore()
+
+	router.Use(func(ctx *gin.Context) {
+		ctx.Set("config", cfg)
+		ctx.Set("cache", fc)
+		ctx.Set("weather", weatherClient)
+		ctx.Set("google", googleClient)
+		ctx.Set("errorStore", errorStore)
+		ctx.Next()
+	})
+
 	SetupRoutes(router)
 	return router
+}
+
+func seedCache(t *testing.T, fc *cache.FileCache, cfg *config.Config) {
+	t.Helper()
+
+	weatherKey := fmt.Sprintf("weather:%s:%s", cfg.Location.Country, cfg.Location.CityName)
+	weatherPayload := &models.WeatherResponse{
+		Location: cfg.Location.CityName,
+		Current: models.CurrentWeather{
+			Temperature: 10,
+			Condition:   "晴",
+			Icon:        "01d",
+			Humidity:    40,
+			WindSpeed:   2,
+		},
+		Today: models.TodayWeather{
+			MaxTemp: 15,
+			MinTemp: 5,
+			Summary: "晴",
+		},
+		PrecipSlots: []models.PrecipSlot{{Time: "09:00", Precip: 10}},
+		Alerts:      []models.WeatherAlert{},
+	}
+	if _, err := fc.Write(weatherKey, weatherPayload, map[string]string{"source": "test"}); err != nil {
+		t.Fatalf("seed weather cache: %v", err)
+	}
+
+	calendarPayload := &models.CalendarResponse{
+		Days: []models.CalendarDay{
+			{
+				Date:   time.Now().Format("2006-01-02"),
+				AllDay: []models.Event{},
+				Timed: []models.Event{
+					{
+						ID:       "seed-event",
+						Title:    "テスト",
+						Start:    time.Now().Format(time.RFC3339),
+						End:      time.Now().Add(1 * time.Hour).Format(time.RFC3339),
+						Color:    "#A4BDFC",
+						Calendar: "shared",
+					},
+				},
+			},
+		},
+	}
+	if _, err := fc.Write("google_calendar_events", calendarPayload, map[string]string{"source": "test"}); err != nil {
+		t.Fatalf("seed calendar cache: %v", err)
+	}
+
+	tasksPayload := &models.TasksResponse{
+		Items: []models.TaskItem{
+			{
+				ID:        "seed-task",
+				Title:     "テスト",
+				Notes:     "",
+				Status:    "needsAction",
+				DueDate:   stringPtr(time.Now().Format("2006-01-02")),
+				Priority:  1,
+				CreatedAt: time.Now().Add(-1 * time.Hour),
+			},
+		},
+	}
+	if _, err := fc.Write("google_tasks_items", tasksPayload, map[string]string{"source": "test"}); err != nil {
+		t.Fatalf("seed tasks cache: %v", err)
+	}
+}
+
+func stringPtr(s string) *string {
+	return &s
 }
 
 func performRequest(router *gin.Engine, method, path string) *httptest.ResponseRecorder {
@@ -33,7 +138,7 @@ func decodeJSON(t *testing.T, rec *httptest.ResponseRecorder, out any) {
 }
 
 func TestGetStatus(t *testing.T) {
-	router := setupTestRouter()
+	router := setupTestRouter(t)
 	rec := performRequest(router, http.MethodGet, "/api/status")
 
 	if rec.Code != http.StatusOK {
@@ -51,13 +156,19 @@ func TestGetStatus(t *testing.T) {
 		t.Fatalf("now parse error: %v", err)
 	}
 
-	if payload.LastUpdated.Weather == "" || payload.LastUpdated.Calendar == "" || payload.LastUpdated.Tasks == "" {
-		t.Fatalf("lastUpdated has empty value")
+	if _, err := time.Parse(time.RFC3339, payload.LastUpdated.Weather); err != nil {
+		t.Fatalf("weather lastUpdated parse error: %v", err)
+	}
+	if _, err := time.Parse(time.RFC3339, payload.LastUpdated.Calendar); err != nil {
+		t.Fatalf("calendar lastUpdated parse error: %v", err)
+	}
+	if _, err := time.Parse(time.RFC3339, payload.LastUpdated.Tasks); err != nil {
+		t.Fatalf("tasks lastUpdated parse error: %v", err)
 	}
 }
 
 func TestGetCalendar(t *testing.T) {
-	router := setupTestRouter()
+	router := setupTestRouter(t)
 	rec := performRequest(router, http.MethodGet, "/api/calendar")
 
 	if rec.Code != http.StatusOK {
@@ -77,7 +188,7 @@ func TestGetCalendar(t *testing.T) {
 }
 
 func TestGetTasks(t *testing.T) {
-	router := setupTestRouter()
+	router := setupTestRouter(t)
 	rec := performRequest(router, http.MethodGet, "/api/tasks")
 
 	if rec.Code != http.StatusOK {
@@ -104,7 +215,7 @@ func TestGetTasks(t *testing.T) {
 }
 
 func TestGetWeather(t *testing.T) {
-	router := setupTestRouter()
+	router := setupTestRouter(t)
 	rec := performRequest(router, http.MethodGet, "/api/weather")
 
 	if rec.Code != http.StatusOK {
@@ -123,7 +234,7 @@ func TestGetWeather(t *testing.T) {
 }
 
 func TestHealth(t *testing.T) {
-	router := setupTestRouter()
+	router := setupTestRouter(t)
 	rec := performRequest(router, http.MethodGet, "/api/health")
 
 	if rec.Code != http.StatusOK {

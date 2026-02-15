@@ -97,7 +97,8 @@ func (c *Client) GetWeather(ctx context.Context, cityName, country string) (*mod
 	// キャッシュを読み込もうするます
 	var cachedWeather models.WeatherResponse
 	_, found, stale, err := c.fc.ReadPayload(cacheKey, ttl, &cachedWeather)
-	if found && !stale {
+	cachedAvailable := found && err == nil
+	if cachedAvailable && !stale {
 		// キャッシュが有効な場合は返すます
 		return &cachedWeather, nil
 	}
@@ -111,6 +112,9 @@ func (c *Client) GetWeather(ctx context.Context, cityName, country string) (*mod
 	// Open-Meteo APIから天気データを取得するます
 	weatherRsp, err := c.fetchFromOpenMeteo(ctx, coords.Latitude, coords.Longitude, cityName)
 	if err != nil {
+		if cachedAvailable {
+			return &cachedWeather, err
+		}
 		return nil, err
 	}
 

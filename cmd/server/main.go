@@ -11,6 +11,7 @@ import (
 	httproutes "github.com/rihow/FamilyDashboard/internal/http"
 	"github.com/rihow/FamilyDashboard/internal/services/google"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
+	"github.com/rihow/FamilyDashboard/internal/status"
 )
 
 // main はGinサーバーのエントリーポイントなのです。
@@ -30,6 +31,9 @@ func main() {
 
 	// キャッシュを初期化するます
 	fc := cache.New("./data/cache")
+
+	// エラー状態ストアを初期化するます
+	errorStore := status.NewErrorStore()
 
 	// 天気APIクライアントを初期化するます
 	weatherClient := weather.NewClient(fc, "http://localhost:8080")
@@ -51,8 +55,10 @@ func main() {
 	// グローバルミドルウェアで設定・クライアントをコンテキストに保存するます。
 	router.Use(func(ctx *gin.Context) {
 		ctx.Set("config", cfg)
+		ctx.Set("cache", fc)
 		ctx.Set("weather", weatherClient)
 		ctx.Set("google", googleClient)
+		ctx.Set("errorStore", errorStore)
 		ctx.Next()
 	})
 

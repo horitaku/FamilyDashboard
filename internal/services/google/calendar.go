@@ -15,16 +15,23 @@ import (
 func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarResponse, error) {
 	// キャッシュキーを生成するのです
 	cacheKey := "google_calendar_events"
+	ttl := c.config.GetRefreshInterval("calendar")
 
 	// キャッシュが有効か確認するのです
-	cachedData, hit, err := c.useCache(cacheKey)
-	if err == nil && hit {
-		// キャッシュがヒットしたので、パースして返すのです
-		var resp models.CalendarResponse
-		if err := parseJSONResponse(cachedData, &resp); err == nil {
-			return &resp, nil
+	var cachedData []byte
+	entry, exists, stale, err := c.cache.Read(cacheKey, ttl)
+	if err == nil && exists {
+		if !stale {
+			// キャッシュがヒットしたので、パースして返すのです
+			var resp models.CalendarResponse
+			if err := parseJSONResponse(entry.Payload, &resp); err == nil {
+				return &resp, nil
+			}
+			// パースエラーの場合は、APIから新たに取得するのです
+		} else {
+			// 期限切れでもフォールバック用に保持するのです
+			cachedData = entry.Payload
 		}
-		// パースエラーの場合は、APIから新たに取得するのです
 	}
 
 	// トークンが無い場合は、ダミーデータを返すます（開発用）
@@ -64,7 +71,7 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 			var resp models.CalendarResponse
 			if err := parseJSONResponse(cachedData, &resp); err == nil {
 				fmt.Printf("⚠️ Google Calendar API error, cache を使用するのです: %v\n", err)
-				return &resp, nil
+				return &resp, err
 			}
 		}
 		return nil, fmt.Errorf("Google Calendar API error: %w", err)
