@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ============================================================================
 // APIレスポンス共通構造体
@@ -117,4 +120,14 @@ type WeatherAlert struct {
 	Headline string `json:"headline"`    // 見出し
 	Desc     string `json:"description"` // 詳細
 	Severity string `json:"severity"`    // 重大度（"注意報" "警報" "特別警報"）
+}
+
+// ============================================================================
+// ユーティリティ関数
+// ============================================================================
+
+// ToJSON は任意の構造体をJSON バイト列に変換するのです。
+// キャッシュへの保存や、APIレスポンスの詳細な処理に使用するのです。
+func ToJSON(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	httproutes "github.com/rihow/FamilyDashboard/internal/http"
+	"github.com/rihow/FamilyDashboard/internal/services/google"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
 )
 
@@ -33,6 +34,17 @@ func main() {
 	// 天気APIクライアントを初期化するます
 	weatherClient := weather.NewClient(fc, "http://localhost:8080")
 
+	// Google APIクライアントを初期化するます
+	googleClient := google.NewClient(fc, cfg)
+
+	// 保存されたトークンを読み込む（以前にOAuth認可済みの場合）
+	if err := googleClient.LoadTokens("./data/tokens.json"); err != nil {
+		fmt.Printf("⚠️ トークン読込エラー: %v\n", err)
+		// エラーでも継続する（トークンなしで開始してもOK）
+	} else {
+		fmt.Printf("✨ Google OAuth トークンを読み込みました\n")
+	}
+
 	// Ginルーターを初期化
 	router := gin.Default()
 
@@ -40,6 +52,7 @@ func main() {
 	router.Use(func(ctx *gin.Context) {
 		ctx.Set("config", cfg)
 		ctx.Set("weather", weatherClient)
+		ctx.Set("google", googleClient)
 		ctx.Next()
 	})
 

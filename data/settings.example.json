@@ -1,0 +1,23 @@
+{
+	"refreshIntervals": {
+		"weatherSec": 300,
+		"calendarSec": 300,
+		"tasksSec": 300
+	},
+	"location": {
+		"cityName": "姫路市",
+		"country": "JP"
+	},
+	"google": {
+		"clientId": "YOUR_GOOGLE_CLIENT_ID_HERE",
+		"clientSecret": "YOUR_GOOGLE_CLIENT_SECRET_HERE",
+		"redirectUri": "http://localhost:8080/auth/callback",
+		"calendarId": "YOUR_SHARED_CALENDAR_ID@group.calendar.google.com",
+		"taskListId": "@default"
+	},
+	"weather": {
+		"provider": "openmeteo",
+		"apiKey": "",
+		"baseUrl": "https://api.open-meteo.com/v1"
+	}
+}

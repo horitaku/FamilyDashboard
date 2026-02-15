@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
+	"github.com/rihow/FamilyDashboard/internal/services/google"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
 )
 
@@ -46,47 +47,39 @@ func GetStatus(ctx *gin.Context) {
 // ============================================================================
 
 // GetCalendar は /api/calendar のGETハンドラーなのです。
-// 最大7日分のイベントを返すもなのです（いまはダミーデータ）。
+// Google Calendar APIからイベントを取得し、最大7日分を返すます。
+// トークンが無い場合はダミーデータを返すのです。
 func GetCalendar(ctx *gin.Context) {
-	// ダミーイベント
-	dummyEvent := models.Event{
-		ID:       "dummy-event-1",
-		Title:    "チームミーティング",
-		Start:    time.Now().UTC().Format(time.RFC3339),
-		End:      time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339),
-		Color:    "#4285F4",
-		Calendar: "仕事",
-		Desc:     "定期ミーティング",
-	}
-
-	dummyAllDayEvent := models.Event{
-		ID:       "dummy-event-2",
-		Title:    "家族のおでかけ",
-		Start:    time.Now().UTC().Format("2006-01-02"),
-		End:      time.Now().UTC().Format("2006-01-02"),
-		Color:    "#EA4335",
-		Calendar: "家族",
-		Desc:     "全日予定",
-	}
-
-	today := time.Now().UTC().Format("2006-01-02")
-
-	response := models.CalendarResponse{
-		Days: []models.CalendarDay{
-			{
-				Date:   today,
-				AllDay: []models.Event{dummyAllDayEvent},
-				Timed:  []models.Event{dummyEvent},
+	// コンテキストから Google クライアントと設定を取得するます
+	googleRaw, exists := ctx.Get("google")
+	if !exists {
+		// Google クライアントが無い場合はダミーデータを返す
+		fmt.Println("⚠️ Google クライアントが見つかりません。ダミーデータを返すのです")
+		dummyResp := &models.CalendarResponse{
+			Days: []models.CalendarDay{
+				{
+					Date:   time.Now().Format("2006-01-02"),
+					AllDay: []models.Event{},
+					Timed:  []models.Event{},
+				},
 			},
-			{
-				Date:   time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02"),
-				AllDay: []models.Event{},
-				Timed:  []models.Event{},
-			},
-		},
+		}
+		ctx.JSON(http.StatusOK, dummyResp)
+		return
+	}
+	googleClient := googleRaw.(*google.Client)
+
+	// Google Calendar APIからイベントを取得するます
+	calendarResp, err := googleClient.GetCalendarEvents(ctx)
+	if err != nil {
+		fmt.Printf("❌ カレンダーデータ取得エラー: %v\n", err)
+		ctx.JSON(http.StatusOK, &models.CalendarResponse{
+			Days: []models.CalendarDay{},
+		})
+		return
 	}
 
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, calendarResp)
 }
 
 // ============================================================================
@@ -94,47 +87,33 @@ func GetCalendar(ctx *gin.Context) {
 // ============================================================================
 
 // GetTasks は /api/tasks のGETハンドラーなのです。
-// サーバー側ソート済みのタスクリストを返すもなのです（いまはダミーデータ）。
+// Google Tasks APIからタスクを取得し、サーバー側ソート済みのタスクリストを返すます。
+// トークンが無い場合はダミーデータを返すのです。
 func GetTasks(ctx *gin.Context) {
-	// ダミーのタスク
-	today := time.Now().UTC().Format("2006-01-02")
-	tomorrow := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
+	// コンテキストから Google クライアントを取得するます
+	googleRaw, exists := ctx.Get("google")
+	if !exists {
+		// Google クライアントが無い場合はダミーデータを返す
+		fmt.Println("⚠️ Google クライアントが見つかりません。ダミーデータを返すのです")
+		dummyResp := &models.TasksResponse{
+			Items: []models.TaskItem{},
+		}
+		ctx.JSON(http.StatusOK, dummyResp)
+		return
+	}
+	googleClient := googleRaw.(*google.Client)
 
-	task1 := models.TaskItem{
-		ID:        "task-1",
-		Title:     "シュッポとミサイルで遊ぶ",
-		Notes:     "2時間ほど遊ぶます",
-		Status:    "needsAction",
-		DueDate:   &today,
-		Priority:  1, // 最高優先度
-		CreatedAt: time.Now().UTC().Add(-24 * time.Hour),
+	// Google Tasks APIからタスクを取得するます
+	tasksResp, err := googleClient.GetTaskItems(ctx)
+	if err != nil {
+		fmt.Printf("❌ タスクデータ取得エラー: %v\n", err)
+		ctx.JSON(http.StatusOK, &models.TasksResponse{
+			Items: []models.TaskItem{},
+		})
+		return
 	}
 
-	task2 := models.TaskItem{
-		ID:        "task-2",
-		Title:     "スパイ任務をこなす",
-		Notes:     "情報収集タイム",
-		Status:    "needsAction",
-		DueDate:   &tomorrow,
-		Priority:  2,
-		CreatedAt: time.Now().UTC().Add(-12 * time.Hour),
-	}
-
-	task3 := models.TaskItem{
-		ID:        "task-3",
-		Title:     "テレパシーの練習",
-		Notes:     "毎日する~",
-		Status:    "needsAction",
-		DueDate:   nil, // 期限なし
-		Priority:  3,
-		CreatedAt: time.Now().UTC().Add(-1 * time.Hour),
-	}
-
-	response := models.TasksResponse{
-		Items: []models.TaskItem{task1, task2, task3},
-	}
-
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, tasksResp)
 }
 
 // ============================================================================
@@ -201,4 +180,85 @@ func GetWeather(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, weatherRsp)
+}
+
+// ============================================================================
+// /auth/login ハンドラー
+// ============================================================================
+
+// AuthLogin は Google OAuth ログインへのリダイレクトリンクを生成するのです。
+// ブラウザこのエンドポイントにアクセスするとGoogle ログイン画面に遷移するます。
+func AuthLogin(ctx *gin.Context) {
+	cfg := ctx.MustGet("config").(*config.Config)
+
+	if cfg.Google.ClientID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Google OAuth設定が未設定のです",
+		})
+		return
+	}
+
+	// OAuth 認可画面へのURL生成
+	// スコープ: Google Calendar と Google Tasks の読み取り権限
+	scopes := "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly"
+
+	authURL := fmt.Sprintf(
+		"https://accounts.google.com/o/oauth2/v2/auth?"+
+			"client_id=%s&"+
+			"redirect_uri=%s&"+
+			"response_type=code&"+
+			"scope=%s&"+
+			"access_type=offline",
+		cfg.Google.ClientID,
+		cfg.Google.RedirectUri,
+		scopes,
+	)
+
+	// リダイレクト
+	ctx.Redirect(http.StatusTemporaryRedirect, authURL)
+}
+
+// ============================================================================
+// /auth/callback ハンドラー
+// ============================================================================
+
+// AuthCallback は Google OAuth のコールバックハンドラーなのです。
+// クエリから "code" パラメータを受け取り、トークン取得を実行するます。
+func AuthCallback(ctx *gin.Context) {
+	// ユーザーが認可をキャンセルした場合
+	if err := ctx.Query("error"); err != "" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error": fmt.Sprintf("OAuth キャンセル: %s", err),
+		})
+		return
+	}
+
+	// 認可コードを取得
+	code := ctx.Query("code")
+	if code == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "認可コードが未設定のです",
+		})
+		return
+	}
+
+	// Google クライアントを取得
+	googleClient := ctx.MustGet("google").(*google.Client)
+
+	// OAuth認可コードフロー実行（トークン取得）
+	tokenResp, err := googleClient.OAuthAuthorizationCodeFlow(ctx, code)
+	if err != nil {
+		fmt.Printf("❌ OAuthエラー: %v\n", err)
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error": fmt.Sprintf("OAuth フロー失敗: %v", err),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":       "認可成功したます！✨",
+		"access_token":  tokenResp.AccessToken[:20] + "...",
+		"expires_in":    tokenResp.ExpiresIn,
+		"refresh_token": "保存済み",
+	})
 }

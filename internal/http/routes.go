@@ -27,4 +27,14 @@ func SetupRoutes(router *gin.Engine) {
 			})
 		})
 	}
+
+	// OAuth ルートのグループ化
+	auth := router.Group("/auth")
+	{
+		// Google OAuth ログイン
+		auth.GET("/login", AuthLogin)
+
+		// Google OAuth コールバック
+		auth.GET("/callback", AuthCallback)
+	}
 }
