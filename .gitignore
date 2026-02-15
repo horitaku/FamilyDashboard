@@ -29,8 +29,14 @@ server.exe
 
 # Vite
 frontend/.vite/
+
 # Runtime data - キャッシュファイル（実行時に生成される）
 data/cache/
 
-# ただし data/ ディレクトリ自体は保持（設定ファイル用）
-# data/ の除外が必要な場合は個別に設定する
+# 秘密情報を含む設定ファイル（gitに含めない）
+data/settings.json
+data/tokens.json
+data/*.secret
+
+# ただし テンプレートファイルはgitに含める
+!data/settings.example.json
