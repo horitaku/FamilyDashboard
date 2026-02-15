@@ -27,6 +27,10 @@ go.work.sum
 server
 server.exe
 
+# Track cmd/server even if a global ignore rule exists
+!cmd/server/
+!cmd/server/**
+
 # Vite
 frontend/.vite/
 
