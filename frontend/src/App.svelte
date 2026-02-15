@@ -1,47 +1,81 @@
 <script>
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from '/vite.svg'
-  import Counter from './lib/Counter.svelte'
+  import Header from './lib/components/Header.svelte'
+  import Calendar from './lib/components/Calendar.svelte'
+  import Weather from './lib/components/Weather.svelte'
+  import Tasks from './lib/components/Tasks.svelte'
 </script>
 
 <main>
-  <div>
-    <a href="https://vite.dev" target="_blank" rel="noreferrer">
-      <img src={viteLogo} class="logo" alt="Vite Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank" rel="noreferrer">
-      <img src={svelteLogo} class="logo svelte" alt="Svelte Logo" />
-    </a>
+  <Header />
+  <div class="content">
+    <div class="left-column">
+      <Calendar />
+    </div>
+    <div class="right-column">
+      <div class="right-top">
+        <Weather />
+      </div>
+      <div class="right-bottom">
+        <Tasks />
+      </div>
+    </div>
   </div>
-  <h1>Vite + Svelte</h1>
-
-  <div class="card">
-    <Counter />
-  </div>
-
-  <p>
-    Check out <a href="https://github.com/sveltejs/kit#readme" target="_blank" rel="noreferrer">SvelteKit</a>, the official Svelte app framework powered by Vite!
-  </p>
-
-  <p class="read-the-docs">
-    Click on the Vite and Svelte logos to learn more
-  </p>
 </main>
 
 <style>
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
+
+  :global(#app) {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
-  .logo.svelte:hover {
-    filter: drop-shadow(0 0 2em #ff3e00aa);
+
+  main {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
   }
-  .read-the-docs {
-    color: #888;
+
+  .content {
+    width: 100%;
+    height: 90%;
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    box-sizing: border-box;
+    background: #f0f4f8;
+  }
+
+  .left-column {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .right-column {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .right-top {
+    width: 100%;
+    height: 50%;
+    display: flex;
+  }
+
+  .right-bottom {
+    width: 100%;
+    height: 50%;
+    display: flex;
   }
 </style>
