@@ -271,12 +271,6 @@
     font-weight: 700;
   }
 
-  .section-title {
-    margin: 0 0 10px 0;
-    font-size: 1rem;
-    opacity: 0.9;
-  }
-
   .hourly-section {
     padding: 12px;
     background: rgba(255, 255, 255, 0.08);

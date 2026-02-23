@@ -183,9 +183,6 @@
     gap: 20px;
   }
 
-  .day {
-  }
-
   .day-header {
     margin-bottom: 12px;
   }
