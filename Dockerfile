@@ -9,8 +9,9 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # package.json と package-lock.json をコピーして依存関係をインストール
+# ビルドに必要な vite は devDependencies にあるので --only=production は付けないます！
 COPY frontend/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # フロントエンドのソースをコピーしてビルド
 COPY frontend/ ./
