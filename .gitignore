@@ -44,3 +44,4 @@ data/*.secret
 
 # ただし テンプレートファイルはgitに含める
 !data/settings.example.json
+nul
