@@ -2,6 +2,11 @@
   import { onMount } from 'svelte';
   import { getCalendar } from '../api.js';
 
+  // Props: 表示する日数、スキップする日数、タイトル
+  export let daysToShow = 7; // デフォルト: 7日分
+  export let skipDays = 0;   // デフォルト: 0日スキップ
+  export let title = '';     // デフォルト: タイトルなし
+
   let calendarData = null;
   let error = null;
 
@@ -16,6 +21,14 @@
       console.error('カレンダーデータ取得エラー:', err);
       error = err.message;
     }
+  }
+
+  /**
+   * 表示する日数を絞り込む
+   */
+  function filterDays(days) {
+    if (!days) return [];
+    return days.slice(skipDays, skipDays + daysToShow);
   }
 
   /**
@@ -48,22 +61,27 @@
   }
 
   /**
-   * イベントのスタイルを生成（色指定）
+   * 簡易日付フォーマット (M/D)
+   */
+  function formatShortDate(dateString) {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}/${day}`;
+  }
+
+  /**
+   * イベントのスタイルを生成（色を枠線に使用）
    */
   function getEventStyle(event) {
-    let bgColor = '#e0e7ff'; // デフォルト：インジゴ
-    let textColor = '#3730a3';
+    let borderColor = '#3b82f6'; // デフォルト：青
 
-    // イベントの色情報がある場合は使用
+    // イベントの色情報がある場合は枠線に使用
     if (event.color) {
-      bgColor = event.color;
-      // テキスト色は自動判定（簡易版）
-      const rgb = parseInt(event.color.slice(1), 16);
-      const brightness = (rgb >> 16 & 255) * 0.299 + (rgb >> 8 & 255) * 0.587 + (rgb & 255) * 0.114;
-      textColor = brightness > 128 ? '#000' : '#fff';
+      borderColor = event.color;
     }
 
-    return `background-color: ${bgColor}; color: ${textColor}`;
+    return `border-left-color: ${borderColor}; background-color: #ffffff; color: #1f2937;`;
   }
 
   onMount(() => {
@@ -75,20 +93,28 @@
 </script>
 
 <div class="calendar-widget">
+  {#if title}
+    <h2 class="widget-title">{title}</h2>
+  {/if}
   {#if error}
     <div class="error">エラー: {error}</div>
   {:else if calendarData && calendarData.days}
     <div class="days-container">
-      {#each calendarData.days as day}
+      {#each filterDays(calendarData.days) as day}
         <div class="day">
-          <div class="day-header">
-            <h3 class="day-date">{formatDate(day.date)}</h3>
-          </div>
+          {#if !title}
+            <div class="day-header">
+              <h3 class="day-date">{formatDate(day.date)}</h3>
+            </div>
+          {/if}
           <div class="events-container">
             {#if day.allDay && day.allDay.length > 0}
               <div class="all-day-section">
                 {#each day.allDay as event}
                   <div class="event all-day-event" style={getEventStyle(event)}>
+                    {#if title === '今後の予定'}
+                      <span class="event-date">{formatShortDate(day.date)}</span>
+                    {/if}
                     <span class="event-title">{event.title}</span>
                   </div>
                 {/each}
@@ -98,14 +124,17 @@
               <div class="timed-events">
                 {#each day.timed as event}
                   <div class="event timed-event" style={getEventStyle(event)}>
-                    <span class="event-time">{formatTime(event.start)}</span>
+                    {#if title === '今後の予定'}
+                      <span class="event-date">{formatShortDate(day.date)}</span>
+                    {/if}
+                    <span class="event-time">
+                      <span class="time-start">{formatTime(event.start)}</span>
+                      <span class="time-end">{formatTime(event.end)}</span>
+                    </span>
                     <span class="event-title">{event.title}</span>
                   </div>
                 {/each}
               </div>
-            {/if}
-            {#if (!day.allDay || day.allDay.length === 0) && (!day.timed || day.timed.length === 0)}
-              <div class="no-events">予定なし</div>
             {/if}
           </div>
         </div>
@@ -122,11 +151,18 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 24px;
+    padding: 8px 24px 24px 24px;
     box-sizing: border-box;
-    background: #fafafa;
+    background: linear-gradient(135deg, #f0f3f8 0%, #e0e6f0 100%);
     border-radius: 8px;
     overflow-y: auto;
+  }
+
+  .widget-title {
+    margin: 0 0 8px 0;
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #1f2937;
   }
 
   .error,
@@ -148,8 +184,6 @@
   }
 
   .day {
-    border-left: 4px solid #3b82f6;
-    padding-left: 16px;
   }
 
   .day-header {
@@ -182,28 +216,44 @@
   }
 
   .event {
-    padding: 12px 16px;
+    padding: 8px 10px;
     border-radius: 4px;
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     display: flex;
     align-items: center;
     gap: 12px;
   }
 
   .all-day-event {
-    background: rgba(59, 130, 246, 0.15);
-    border-left: 3px solid #3b82f6;
+    background: #ffffff;
+    border-left: 8px solid #3b82f6;
+    color: #1f2937;
   }
 
   .timed-event {
-    background: rgba(99, 102, 241, 0.1);
-    border-left: 2px solid #6366f1;
+    background: #ffffff;
+    border-left: 8px solid #6366f1;
+    color: #1f2937;
+  }
+
+  .event-date {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #6b7280;
+    white-space: nowrap;
+    min-width: 40px;
   }
 
   .event-time {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     font-weight: bold;
-    font-size: 1rem;
-    min-width: 60px;
+    font-size: 0.75rem;
+    min-width: 38px;
+    line-height: 1.2;
+    gap: 2px;
   }
 
   .event-title {
@@ -211,11 +261,5 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .no-events {
-    color: #9ca3af;
-    font-size: 1rem;
-    font-style: italic;
   }
 </style>

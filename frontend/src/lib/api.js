@@ -5,8 +5,11 @@
  * 全エンドポイントはバックエンドのみで提供される（フロントエンドは直接外部APIを呼ばない）
  */
 
+import { getMockResponse } from './mockData.js';
+
 // バックエンドのベースURL（デフォルト: 同じオリジン）
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 /**
  * APIエラークラス
@@ -27,6 +30,10 @@ export class APIError extends Error {
  * @returns {Promise<object>} レスポンスJSON
  */
 async function request(endpoint, options = {}) {
+  if (USE_MOCK) {
+    return getMockResponse(endpoint);
+  }
+
   const url = `${API_BASE_URL}${endpoint}`;
   const defaultOptions = {
     headers: {

@@ -1,4 +1,4 @@
-<script>
+  <script>
   import { onMount } from 'svelte';
   import { getWeather } from '../api.js';
 
@@ -48,6 +48,29 @@
     }
   }
 
+  /**
+   * 週次用の曜日表示
+   */
+  function formatWeekday(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(`${dateStr}T00:00:00+09:00`);
+    const formatter = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      weekday: 'short',
+    });
+    return formatter.format(date);
+  }
+
+  /**
+   * 降水確率の値を取得
+   */
+  function getPrecipValue(slot) {
+    if (!slot) return 0;
+    if (typeof slot.probability === 'number') return slot.probability;
+    if (typeof slot.precip === 'number') return slot.precip;
+    return 0;
+  }
+
   onMount(() => {
     loadWeatherData();
     // 5分ごとにリロード
@@ -60,59 +83,77 @@
   {#if error}
     <div class="error">エラー: {error}</div>
   {:else if weatherData}
-    <!-- 現在の天候セクション -->
-    <div class="current-section">
-      <div class="current-icon">{getWeatherEmoji(weatherData.current?.icon || '')}</div>
-      <div class="current-info">
-        <div class="current-temp">{Math.round(weatherData.current?.temperature || 0)}°C</div>
-        <div class="current-condition">{weatherData.current?.condition || '---'}</div>
+    <div class="current-block">
+      <div class="current-main">
+        <div class="current-icon">{getWeatherEmoji(weatherData.current?.icon || '')}</div>
+        <div class="current-text">
+          <div class="current-condition">{weatherData.current?.condition || '---'}</div>
+          <div class="current-location">{weatherData.location || ''}</div>
+        </div>
       </div>
+      {#if weatherData.today}
+        <div class="current-temps">
+          <div class="temp-card temp-now">
+            <span class="temp-label">いまのきおん</span>
+            <span class="temp-value">{Math.round(weatherData.current?.temperature || 0)}°C</span>
+          </div>
+          <div class="temp-card temp-max">
+            <span class="temp-label">さいこう</span>
+            <span class="temp-value">{Math.round(weatherData.today.maxTemp || 0)}°C</span>
+          </div>
+          <div class="temp-card temp-min">
+            <span class="temp-label">さいてい</span>
+            <span class="temp-value">{Math.round(weatherData.today.minTemp || 0)}°C</span>
+          </div>
+        </div>
+      {/if}
     </div>
 
-    <!-- 本日の最高・最低気温 -->
-    {#if weatherData.today}
-      <div class="today-section">
-        <div class="temp-row">
-          <span class="temp-label">最高</span>
-          <span class="temp-value">{Math.round(weatherData.today.maxTemp || 0)}°C</span>
+    <div class="alerts-section">
+      {#if weatherData.alerts && weatherData.alerts.length > 0}
+        {#each weatherData.alerts as alert}
+          <div class="alert {alert.severity === '特別警報' ? 'alert-special' : alert.severity === '警報' ? 'alert-error' : 'alert-warning'}">
+            <span class="alert-severity">{alert.severity}</span>
+            <span class="alert-title">{alert.title}</span>
+          </div>
+        {/each}
+      {:else}
+        <div class="alert alert-ok">
+          現在、注意報・警報はありません
         </div>
-        <div class="temp-row">
-          <span class="temp-label">最低</span>
-          <span class="temp-value">{Math.round(weatherData.today.minTemp || 0)}°C</span>
-        </div>
-      </div>
-    {/if}
+      {/if}
+    </div>
 
-    <!-- 降水確率 -->
     {#if weatherData.precipSlots && weatherData.precipSlots.length > 0}
-      <div class="precip-section">
-        <h4 class="section-title">降水確率</h4>
-        <div class="precip-grid">
+      <div class="hourly-section">
+        <div class="hourly-grid">
           {#each weatherData.precipSlots.slice(0, 8) as slot}
-            <div class="precip-slot">
-              <div class="precip-time">{slot.time}</div>
-              <div class="precip-bar-container">
-                <div
-                  class="precip-bar"
-                  style={`height: ${slot.probability}%`}
-                ></div>
+            <div class="hourly-slot">
+              <div class="hourly-time">{slot.time}</div>
+              <div class="hourly-icon">
+                {getWeatherEmoji(slot.icon || weatherData.current?.icon || '')}
               </div>
-              <div class="precip-percent">{slot.probability}%</div>
+              <div class="hourly-precip">{getPrecipValue(slot)}%</div>
             </div>
           {/each}
         </div>
       </div>
     {/if}
-
-    <!-- アラート・注意報 -->
-    {#if weatherData.alerts && weatherData.alerts.length > 0}
-      <div class="alerts-section">
-        {#each weatherData.alerts as alert}
-          <div class="alert alert-{alert.severity}">
-            <span class="alert-severity">{alert.severity}</span>
-            <span class="alert-title">{alert.title}</span>
-          </div>
-        {/each}
+    
+    {#if weatherData.weekly && weatherData.weekly.length > 0}
+      <div class="weekly-section">
+        <div class="weekly-grid">
+          {#each weatherData.weekly.slice(0, 7) as day}
+            <div class="weekly-item">
+              <div class="weekly-day">{formatWeekday(day.date)}</div>
+              <div class="weekly-icon">{getWeatherEmoji(day.icon || '')}</div>
+              <div class="weekly-temps">
+                <span class="weekly-max">{Math.round(day.maxTemp || 0)}°</span>
+                <span class="weekly-min">{Math.round(day.minTemp || 0)}°</span>
+              </div>
+            </div>
+          {/each}
+        </div>
       </div>
     {/if}
   {:else}
@@ -126,10 +167,11 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 24px;
+    gap: 8px;
+    padding: 8px;
     box-sizing: border-box;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, #0f3d66 0%, #1d6fa5 52%, #46b6c9 100%);
+    color: #f8fafc;
     border-radius: 8px;
     overflow-y: auto;
   }
@@ -146,115 +188,175 @@
     color: #fca5a5;
   }
 
-  /* 現在の天候 */
-  .current-section {
+  .current-block {
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 12px 8px 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .current-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
   }
 
   .current-icon {
-    font-size: 5rem;
+    font-size: 5.2rem;
     line-height: 1;
   }
 
-  .current-info {
+  .current-text {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-  }
-
-  .current-temp {
-    font-size: 3rem;
-    font-weight: bold;
-    line-height: 1;
+    gap: 6px;
   }
 
   .current-condition {
-    font-size: 1.3rem;
-    margin-top: 8px;
-    opacity: 0.95;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
-  /* 最高・最低気温 */
-  .today-section {
-    display: flex;
-    gap: 24px;
-    margin-bottom: 20px;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
+  .current-location {
+    font-size: 1rem;
+    opacity: 0.85;
   }
 
-  .temp-row {
-    flex: 1;
+  .current-temps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .temp-card {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    font-size: 1.2rem;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    min-width: 86px;
+  }
+
+  .temp-now {
+    background: rgba(14, 165, 233, 0.22);
+    border: 1px solid rgba(125, 211, 252, 0.4);
+  }
+
+  .temp-max {
+    background: rgba(253, 230, 138, 0.22);
+    border: 1px solid rgba(253, 230, 138, 0.4);
+  }
+
+  .temp-min {
+    background: rgba(191, 219, 254, 0.18);
+    border: 1px solid rgba(191, 219, 254, 0.4);
   }
 
   .temp-label {
-    opacity: 0.8;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    letter-spacing: 0.08em;
   }
 
   .temp-value {
-    font-weight: bold;
-    font-size: 1.5rem;
-  }
-
-  /* 降水確率 */
-  .precip-section {
-    margin-bottom: 20px;
+    font-size: 2rem;
+    font-weight: 700;
   }
 
   .section-title {
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
     font-size: 1rem;
     opacity: 0.9;
   }
 
-  .precip-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+  .hourly-section {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
   }
 
-  .precip-slot {
+  .hourly-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+  }
+
+  .hourly-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    padding: 8px 4px;
+    background: rgba(15, 23, 42, 0.2);
+    border-radius: 10px;
   }
 
-  .precip-time {
+  .hourly-time {
     font-size: 0.85rem;
-    opacity: 0.8;
+    opacity: 0.85;
   }
 
-  .precip-bar-container {
-    width: 24px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
+  .hourly-icon {
+    font-size: 1.6rem;
+  }
+
+  .hourly-precip {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .weekly-section {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+
+  .weekly-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .weekly-item {
     display: flex;
-    align-items: flex-end;
-    overflow: hidden;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    background: rgba(15, 23, 42, 0.18);
+    border-radius: 8px;
   }
 
-  .precip-bar {
-    width: 100%;
-    background: #fbbf24;
-    border-radius: 2px;
-    transition: height 0.3s ease;
-  }
-
-  .precip-percent {
+  .weekly-day {
     font-size: 0.8rem;
-    font-weight: bold;
+    opacity: 0.85;
+  }
+
+  .weekly-icon {
+    font-size: 1.2rem;
+  }
+
+  .weekly-temps {
+    display: flex;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .weekly-max {
+    color: #fde68a;
+  }
+
+  .weekly-min {
+    color: #bfdbfe;
   }
 
   /* アラート */
@@ -262,8 +364,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-top: 16px;
-    border-top: 2px solid rgba(255, 255, 255, 0.2);
+    padding-top: 0;
   }
 
   .alert {
@@ -271,19 +372,31 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 0.95rem;
     animation: blink-alert 2s ease-in-out infinite;
   }
 
   .alert-warning {
-    background: rgba(245, 158, 11, 0.3);
-    border-left: 3px solid #fbbf24;
+    background: rgba(245, 158, 11, 0.7);
+    border-left: 6px solid #fbbf24;
+  }
+
+  .alert-special {
+    background: rgba(168, 85, 247, 0.7);
+    border-left: 6px solid #d8b4fe;
   }
 
   .alert-error {
-    background: rgba(239, 68, 68, 0.3);
-    border-left: 3px solid #fca5a5;
+    background: rgba(239, 68, 68, 0.7);
+    border-left: 6px solid #fca5a5;
+  }
+
+  .alert-ok {
+    background: rgba(16, 185, 129, 0.2);
+    border-left: 6px solid #6ee7b7;
+    font-size: 0.9rem;
+    animation: none;
   }
 
   .alert-severity {

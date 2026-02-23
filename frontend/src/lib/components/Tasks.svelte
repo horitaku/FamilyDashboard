@@ -4,8 +4,11 @@
 
   let tasksData = null;
   let error = null;
+  let tasksWidgetEl = null;
+  let displayCount = 12;
 
-  const MAX_DISPLAY_TASKS = 12;
+  const ESTIMATED_ROW_HEIGHT = 46;
+  const WIDGET_VERTICAL_PADDING = 16;
 
   /**
    * タスクデータを取得
@@ -94,39 +97,58 @@
     loadTasksData();
     // 5分ごとにリロード
     const interval = setInterval(loadTasksData, 300000);
-    return () => clearInterval(interval);
+    let resizeObserver = null;
+
+    if (tasksWidgetEl && 'ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const availableHeight = Math.max(
+          0,
+          entry.contentRect.height - WIDGET_VERTICAL_PADDING
+        );
+        const nextCount = Math.max(
+          1,
+          Math.floor(availableHeight / ESTIMATED_ROW_HEIGHT)
+        );
+        displayCount = nextCount;
+      });
+      resizeObserver.observe(tasksWidgetEl);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
   });
 </script>
 
-<div class="tasks-widget">
+<div class="tasks-widget" bind:this={tasksWidgetEl}>
   {#if error}
     <div class="error">エラー: {error}</div>
   {:else if tasksData && tasksData.items}
-    <h2 class="widget-title">タスク一覧</h2>
     {#if tasksData.items.length === 0}
       <div class="no-tasks">タスクはありません</div>
     {:else}
       <div class="tasks-list">
-        {#each tasksData.items.slice(0, MAX_DISPLAY_TASKS) as task, idx}
+        {#each tasksData.items.slice(0, displayCount) as task, idx}
           <div class="task-item" style={getTaskStyle(task)}>
-            <div class="task-content">
-              <div class="task-title">{task.title}</div>
-              <div class="task-meta">
-                <span class="task-due">{formatDueDate(task.dueDate)}</span>
-                {#if task.priority}
-                  <span class="task-priority">{getPriorityLabel(task.priority)}</span>
-                {/if}
-              </div>
+            <div class="task-line">
+              <span class="task-title">{task.title}</span>
+              <span class="task-due">{formatDueDate(task.dueDate)}</span>
+              {#if task.priority}
+                <span class="task-priority">{getPriorityLabel(task.priority)}</span>
+              {/if}
+              {#if task.completed}
+                <span class="task-badge badge-completed">完了</span>
+              {/if}
             </div>
-            {#if task.completed}
-              <div class="task-badge badge-completed">完了</div>
-            {/if}
           </div>
         {/each}
       </div>
-      {#if tasksData.items.length > MAX_DISPLAY_TASKS}
+      {#if tasksData.items.length > displayCount}
         <div class="more-tasks">
-          他 {tasksData.items.length - MAX_DISPLAY_TASKS} 件
+          他 {tasksData.items.length - displayCount} 件
         </div>
       {/if}
     {/if}
@@ -141,11 +163,11 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 24px;
+    padding: 8px;
     box-sizing: border-box;
-    background: #fafafa;
+    background: linear-gradient(135deg, #f0f3f8 0%, #e0e6f0 100%);
     border-radius: 8px;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .error,
@@ -160,13 +182,6 @@
     color: #ef4444;
   }
 
-  .widget-title {
-    margin: 0 0 16px 0;
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: #1f2937;
-  }
-
   .no-tasks {
     text-align: center;
     color: #9ca3af;
@@ -177,7 +192,7 @@
   .tasks-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     flex: 1;
   }
 
@@ -185,8 +200,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-left: 4px solid #d1d5db;
+    padding: 6px 10px;
+    border-left: 8px solid #d1d5db;
     background: #f9fafb;
     border-radius: 4px;
     transition: all 0.2s ease;
@@ -196,45 +211,44 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .task-content {
-    flex: 1;
+  .task-line {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 6px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
   }
 
   .task-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 500;
     color: #1f2937;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .task-meta {
-    display: flex;
-    gap: 12px;
-    font-size: 0.9rem;
-    color: #6b7280;
+    flex: 1;
   }
 
   .task-due {
     font-weight: 500;
+    font-size: 0.85rem;
+    color: #6b7280;
+    flex-shrink: 0;
   }
 
   .task-priority {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    flex-shrink: 0;
   }
 
   .task-badge {
-    padding: 4px 12px;
+    padding: 2px 8px;
     border-radius: 12px;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
   }
 
   .badge-completed {

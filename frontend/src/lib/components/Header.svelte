@@ -26,18 +26,6 @@
     return formatter.format(date);
   }
 
-  /**
-   * 日付フォーマット（mm月dd日(曜日)）
-   */
-  function formatDate(date) {
-    const formatter = new Intl.DateTimeFormat('ja-JP', {
-      timeZone: 'Asia/Tokyo',
-      month: 'numeric',
-      day: 'numeric',
-      weekday: 'short',
-    });
-    return formatter.format(date);
-  }
 
   /**
    * ステータス情報を定期的に取得してエラー状態を監視
@@ -72,7 +60,6 @@
   <div class="header-content">
     <div class="clock-container">
       <div class="time">{formatTime(now)}</div>
-      <div class="date">{formatDate(now)}</div>
     </div>
     <div class="status-container" class:error={hasError}>
       {#if hasError}
@@ -86,11 +73,11 @@
 <style>
   header {
     width: 100%;
-    height: 10%;
+    height: 5%;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     display: flex;
     align-items: center;
-    padding: 0 40px;
+    padding: 0 16px;
     box-sizing: border-box;
     color: white;
   }
@@ -104,22 +91,14 @@
 
   .clock-container {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
   }
 
   .time {
-    font-size: 5.5rem;
+    font-size: 2.5rem;
     font-weight: bold;
     line-height: 1;
     letter-spacing: 0.08em;
-  }
-
-  .date {
-    font-size: 1.8rem;
-    margin-top: 12px;
-    opacity: 0.9;
-    letter-spacing: 0.05em;
   }
 
   .status-container {
