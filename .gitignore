@@ -1,0 +1,47 @@
+# .gitignore
+node_modules/
+.cache/
+frontend/node_modules/
+frontend/dist/
+bin/
+dist/
+coverage/
+*.log
+*.tmp
+*.temp
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+server
+server.exe
+
+# Track cmd/server even if a global ignore rule exists
+!cmd/server/
+!cmd/server/**
+
+# Vite
+frontend/.vite/
+
+# Runtime data - キャッシュファイル（実行時に生成される）
+data/cache/
+
+# 秘密情報を含む設定ファイル（gitに含めない）
+data/settings.json
+data/tokens.json
+data/*.secret
+
+# ただし テンプレートファイルはgitに含める
+!data/settings.example.json
+nul

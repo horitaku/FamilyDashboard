@@ -1,0 +1,51 @@
+# 🥜 .dockerignore - Docker ビルドから除外するファイル
+
+# Git 関連
+.git
+.gitignore
+.github
+
+# ドキュメント
+*.md
+docs/
+
+# Node.js 関連
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Go 関連
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# データファイル（実行時にマウント）
+data/*.json
+data/cache/*.json
+
+# 開発環境関連
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 関連
+.DS_Store
+Thumbs.db
+
+# テスト関連
+coverage.txt
+*.coverprofile
+
+# ログファイル
+*.log
+
+# 一時ファイル
+tmp/
+temp/
