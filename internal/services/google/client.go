@@ -315,3 +315,29 @@ func (c *Client) RefreshAccessToken(ctx context.Context) error {
 
 	return nil
 }
+
+// EnsureTokenValid はトークンが有効か確認し、必要に応じて自動更新するのです。
+// 期限切れまで1分以内なら、その時点で自動リフレッシュするます。
+func (c *Client) EnsureTokenValid(ctx context.Context) error {
+	// トークンがない場合はエラー
+	if c.accessToken == "" {
+		return fmt.Errorf("アクセストークンが設定されていないのです。最初に OAuth 認証が必要なのです")
+	}
+
+	// 有効期限までの時間を計算（1分のバッファを持たせる）
+	timeUntilExpiry := time.Until(c.tokenExpiresAt)
+	if timeUntilExpiry > 1*time.Minute {
+		// まだ有効なので何もしない
+		return nil
+	}
+
+	// トークンが失効寸前なので、リフレッシュする
+	fmt.Printf("🔄 トークンが期限切れ寸前なので自動更新するのです...\n")
+	if err := c.RefreshAccessToken(ctx); err != nil {
+		return fmt.Errorf("トークン自動更新エラー: %w", err)
+	}
+
+	fmt.Printf("✨ トークンを自動更新したのです！新しい有効期限: %v\n", c.tokenExpiresAt)
+	return nil
+}
+

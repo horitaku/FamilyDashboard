@@ -34,15 +34,19 @@ func (c *Client) GetTaskItems(ctx context.Context) (*models.TasksResponse, error
 		}
 	}
 
-	// トークンが無い場合は、ダミーデータを返すます（開発用）
-	if !c.IsTokenValid() {
-		fmt.Println("⚠️ Google Tasks APIトークンが無いため、ダミータスクを返すのです")
-		dummyResp := c.generateDummyTasks()
-		// ダミーデータもキャッシュに保存するのです
-		if data, err := models.ToJSON(dummyResp); err == nil {
-			_ = c.saveCache(cacheKey, data)
+	// トークンを確認して、必要に応じて自動更新するのです
+	if err := c.EnsureTokenValid(ctx); err != nil {
+		// トークンが無い または更新失敗の場合
+		fmt.Printf("❌ トークン確認エラー: %v\n", err)
+		// キャッシュがあれば使用するのです
+		if cachedData != nil {
+			var resp models.TasksResponse
+			if err := parseJSONResponse(cachedData, &resp); err == nil {
+				fmt.Printf("⚠️ キャッシュ（期限切れ）を使用するのです\n")
+				return &resp, nil
+			}
 		}
-		return dummyResp, nil
+		return nil, err
 	}
 
 	// Google Tasks APIから取得するのです

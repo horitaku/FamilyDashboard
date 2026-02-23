@@ -1,0 +1,58 @@
+# 🥜 FamilyDashboard docker-compose.yml
+# データボリュームを永続化してサーバーを起動するます！
+
+version: '3.8'
+
+services:
+  familydashboard:
+    # イメージ名とタグ
+    image: familydashboard:latest
+    
+    # コンテナ名
+    container_name: familydashboard
+    
+    # ビルド設定（Dockerfileからビルド）
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64  # Raspberry Pi 5 向け
+    
+    # ポートマッピング（ホストの8080 → コンテナの8080）
+    ports:
+      - "8080:8080"
+    
+    # ボリュームマウント（data ディレクトリを永続化）
+    volumes:
+      - ./data:/app/data
+    
+    # 環境変数（必要に応じて設定）
+    environment:
+      - TZ=Asia/Tokyo
+      - FRONTEND_DIST_PATH=/app/frontend/dist
+      # Google OAuth 設定（settings.json で管理）
+      # - GOOGLE_CLIENT_ID=your-client-id
+      # - GOOGLE_CLIENT_SECRET=your-client-secret
+    
+    # 再起動ポリシー（常に再起動）
+    restart: unless-stopped
+    
+    # ヘルスチェック（/api/status エンドポイントで確認）
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # ログ設定（ログサイズを制限）
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ボリューム定義（必要に応じて名前付きボリュームを使用）
+# volumes:
+#   data:
+#     driver: local

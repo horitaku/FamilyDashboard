@@ -47,6 +47,7 @@ func main() {
 		// エラーでも継続する（トークンなしで開始してもOK）
 	} else {
 		fmt.Printf("✨ Google OAuth トークンを読み込みました\n")
+		fmt.Printf("🔍 [DEBUG] トークン状態: IsTokenValid=%v\n", googleClient.IsTokenValid())
 	}
 
 	// Ginルーターを初期化
@@ -64,17 +65,27 @@ func main() {
 
 	// APIルートの設定（internal/httpで定義したルートを登録）
 	httproutes.SetupRoutes(router)
-	router.Static("/assets", "./frontend/dist/assets")
+
+	// 静的ファイル配信の設定（Svelte ビルド成果物を配信）
+	// 環境変数 FRONTEND_DIST_PATH でディレクトリを指定可能（デフォルト: ./frontend/dist）
+	frontendDistPath := os.Getenv("FRONTEND_DIST_PATH")
+	if frontendDistPath == "" {
+		frontendDistPath = "./frontend/dist"
+	}
+
+	// assetsディレクトリを配信（JS/CSS/画像など）
+	router.Static("/assets", frontendDistPath+"/assets")
 
 	// ルートへのアクセスはindex.htmlを返す（SPA対応）
 	router.NoRoute(func(ctx *gin.Context) {
-		// indexファイルが存在しない場合は、エラーのみ返す（後でhosted filesになる予定）
-		indexFile := "./frontend/dist/index.html"
+		indexFile := frontendDistPath + "/index.html"
 		if _, err := os.Stat(indexFile); err == nil {
 			ctx.File(indexFile)
 		} else {
 			ctx.JSON(404, gin.H{
-				"error": "index.html not found. Frontend build required.",
+				"error":   "index.html not found. Frontend build required.",
+				"path":    indexFile,
+				"message": "Please run 'npm run build' in the frontend directory.",
 			})
 		}
 	})

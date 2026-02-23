@@ -3,7 +3,9 @@ package google
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/rihow/FamilyDashboard/internal/models"
@@ -34,15 +36,23 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 		}
 	}
 
-	// トークンが無い場合は、ダミーデータを返すます（開発用）
-	if !c.IsTokenValid() {
-		fmt.Println("⚠️ Google Calendar APIトークンが無いため、ダミーイベントを返すのです")
-		dummyResp := c.generateDummyCalendarEvents()
-		// ダミーデータもキャッシュに保存するのです
-		if data, err := models.ToJSON(dummyResp); err == nil {
-			_ = c.saveCache(cacheKey, data)
+	// トークンの状態をデバッグ出力するのです
+	fmt.Printf("🔍 [DEBUG] IsTokenValid: %v, accessToken length: %d, tokenExpiresAt: %v, now: %v\n",
+		c.IsTokenValid(), len(c.accessToken), c.tokenExpiresAt, time.Now())
+
+	// トークンを確認して、必要に応じて自動更新するのです
+	if err := c.EnsureTokenValid(ctx); err != nil {
+		// トークンが無い または更新失敗の場合
+		fmt.Printf("❌ トークン確認エラー: %v\n", err)
+		// キャッシュがあれば使用するのです
+		if cachedData != nil {
+			var resp models.CalendarResponse
+			if err := parseJSONResponse(cachedData, &resp); err == nil {
+				fmt.Printf("⚠️ キャッシュ（期限切れ）を使用するのです\n")
+				return &resp, nil
+			}
 		}
-		return dummyResp, nil
+		return nil, err
 	}
 
 	// Google Calendar APIから取得するのです
@@ -54,17 +64,28 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 	}
 
 	// 次 7 日分の timeMin, timeMax を構築するのです
-	now := time.Now()
+	now := time.Now().UTC()
 	timeMin := now.Format(time.RFC3339)
 	timeMax := now.AddDate(0, 0, 7).Format(time.RFC3339)
 
-	url := fmt.Sprintf(
-		"https://www.googleapis.com/calendar/v3/calendars/%s/events?timeMin=%s&timeMax=%s&maxResults=250&orderBy=startTime&singleEvents=true",
-		calendarID, timeMin, timeMax,
+	// カレンダーIDをURLエンコード（@ などの特殊文字を含む可能性があるため）
+	// PathEscape は @ をエンコードしないので、手動で置換するます
+	encodedCalendarID := url.PathEscape(calendarID)
+	encodedCalendarID = strings.ReplaceAll(encodedCalendarID, "@", "%40")
+
+	// 最小限のパラメータで試すます（timeMinとtimeMaxのみ）
+	apiURL := fmt.Sprintf(
+		"https://www.googleapis.com/calendar/v3/calendars/%s/events?timeMin=%s&timeMax=%s",
+		encodedCalendarID, timeMin, timeMax,
 	)
 
+	// デバッグ: リクエストURLをログ出力
+	fmt.Printf("🔍 [DEBUG] Calendar API URL: %s\n", apiURL)
+	fmt.Printf("🔍 [DEBUG] Original Calendar ID: %s\n", calendarID)
+	fmt.Printf("🔍 [DEBUG] Encoded Calendar ID: %s\n", encodedCalendarID)
+
 	// HTTPリクエストを実行するのです
-	body, err := c.doRequest(ctx, "GET", url)
+	body, err := c.doRequest(ctx, "GET", apiURL)
 	if err != nil {
 		// APIエラーの場合は、キャッシュがあれば使用するのです
 		if cachedData != nil {
