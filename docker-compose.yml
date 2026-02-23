@@ -15,8 +15,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      platforms:
-        - linux/arm64  # Raspberry Pi 5 向け
+      # platforms オプションは古い docker-compose では未対応
+      # Raspberry Pi 5 で直接ビルドするので自動的に linux/arm64 になるます！
     
     # ポートマッピング（ホストの8080 → コンテナの8080）
     ports:
