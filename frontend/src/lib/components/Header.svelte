@@ -5,6 +5,8 @@
   let now = new Date();
   let statusData = null;
   let hasError = false;
+  let isBackendOffline = false;
+  let statusErrors = [];
 
   /**
    * 現在時刻を Asia/Tokyo タイムゾーンで取得
@@ -33,11 +35,15 @@
   async function updateStatus() {
     try {
       statusData = await getStatus();
+      isBackendOffline = false;
+      statusErrors = Array.isArray(statusData.errors) ? statusData.errors : [];
       // エラーがあれば hasError = true
-      hasError = statusData.errors && statusData.errors.length > 0;
+      hasError = statusErrors.length > 0;
     } catch (error) {
       console.error('ステータス取得エラー:', error);
       hasError = true;
+      isBackendOffline = true;
+      statusErrors = [];
     }
   }
 
@@ -64,7 +70,16 @@
     <div class="status-container" class:error={hasError}>
       {#if hasError}
         <div class="error-indicator"></div>
-        <span class="error-text">接続エラー</span>
+        {#if isBackendOffline}
+          <span class="error-text">サーバー接続エラー</span>
+        {:else}
+          <span class="error-text">データ取得エラー</span>
+          {#if statusErrors.length > 0}
+            <span class="error-sources">
+              {statusErrors.map((item) => item.source).join(' / ')}
+            </span>
+          {/if}
+        {/if}
       {/if}
     </div>
   </div>
@@ -120,21 +135,27 @@
     height: 16px;
     border-radius: 50%;
     background: #ef4444;
-    animation: blink 2s ease-in-out infinite;
+    animation: blink 2s steps(1, end) infinite;
   }
 
   @keyframes blink {
-    0%, 100% {
+    0%, 49% {
       opacity: 1;
     }
-    50% {
-      opacity: 0.3;
+    50%, 100% {
+      opacity: 0;
     }
   }
 
   .error-text {
     font-size: 1.2rem;
     color: #fca5a5;
+  }
+
+  .error-sources {
+    font-size: 0.95rem;
+    color: #fecaca;
+    letter-spacing: 0.02em;
   }
 
   /* エラーがない場合は非表示 */

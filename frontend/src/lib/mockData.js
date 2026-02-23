@@ -2,6 +2,8 @@
  * フロント単体動作向けのモックデータ
  */
 
+const MOCK_STATUS_OFFLINE = import.meta.env.VITE_MOCK_STATUS_OFFLINE === 'true';
+
 function getTokyoDateParts(date) {
   const formatter = new Intl.DateTimeFormat('ja-JP', {
     timeZone: 'Asia/Tokyo',
@@ -275,6 +277,9 @@ function buildStatus() {
 export function getMockResponse(endpoint) {
   switch (endpoint) {
     case '/api/status':
+      if (MOCK_STATUS_OFFLINE) {
+        throw new Error('Mock status offline');
+      }
       return buildStatus();
     case '/api/calendar':
       return { days: buildCalendarDays() };
