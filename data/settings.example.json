@@ -15,6 +15,13 @@
 		"calendarId": "YOUR_SHARED_CALENDAR_ID@group.calendar.google.com",
 		"taskListId": "@default"
 	},
+	"nextcloud": {
+		"serverUrl": "https://nextcloud.example.com",
+		"username": "YOUR_NEXTCLOUD_USERNAME",
+		"password": "YOUR_NEXTCLOUD_APP_PASSWORD",
+		"calendarName": "family",
+		"taskListName": "tasks"
+	},
 	"weather": {
 		"provider": "openmeteo",
 		"apiKey": "",

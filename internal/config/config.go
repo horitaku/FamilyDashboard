@@ -29,6 +29,15 @@ type Google struct {
 	TaskListID   string `json:"taskListId"`   // Google タスクリストID（共有タスクリスト）
 }
 
+// Nextcloud はNextcloud CalDAV/WebDAVの認証・設定を定義する構造体なのです。
+type Nextcloud struct {
+	ServerURL    string `json:"serverUrl"`    // NextcloudサーバーURL（例: https://nextcloud.example.com）
+	Username     string `json:"username"`     // ユーザー名
+	Password     string `json:"password"`     // パスワード または アプリパスワード
+	CalendarName string `json:"calendarName"` // カレンダー名（共有カレンダー）
+	TaskListName string `json:"taskListName"` // タスクリスト名（共有タスクリスト）
+}
+
 // Weather は天気APIの設定を定義する構造体なのです。
 type Weather struct {
 	Provider string `json:"provider"` // 天気プロバイダ（例：openweathermap）
@@ -40,7 +49,8 @@ type Weather struct {
 type Config struct {
 	RefreshIntervals RefreshIntervals `json:"refreshIntervals"` // 更新間隔設定
 	Location         Location         `json:"location"`         // ロケーション設定
-	Google           Google           `json:"google"`           // Google API設定
+	Google           Google           `json:"google"`           // Google API設定（レガシー）
+	Nextcloud        Nextcloud        `json:"nextcloud"`        // Nextcloud CalDAV/WebDAV設定
 	Weather          Weather          `json:"weather"`          // 天気API設定
 	loadedAt         time.Time        // 設定の読み込み時刻（内部用）
 }

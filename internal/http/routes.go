@@ -28,7 +28,8 @@ func SetupRoutes(router *gin.Engine) {
 		})
 	}
 
-	// OAuth ルートのグループ化
+	// OAuth ルートのグループ化（NextcloudではBasic認証を使うため不要 - Step16で削除予定）
+	/*
 	auth := router.Group("/auth")
 	{
 		// Google OAuth ログイン
@@ -37,4 +38,5 @@ func SetupRoutes(router *gin.Engine) {
 		// Google OAuth コールバック
 		auth.GET("/callback", AuthCallback)
 	}
+	*/
 }

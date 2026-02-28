@@ -19,6 +19,8 @@
 - [x] 10. エラーUI・点滅インジケーター
 - [x] 11. 本番用ビルド・デプロイ
 - [ ] 12. 追加・改善・リファクタリング
+- [x] 13. GoogleからNextcloudへの移行計画
+- [x] 14. Nextcloud CalDAVクライアント実装
 
 ---
 
@@ -39,6 +41,11 @@
 | 10. エラーUI | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | 点滅インジケーター/接続エラー表示を実装 |
 | 11. ビルド・デプロイ | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | Svelte静的ビルド作成、Gin静的ファイル配信設定、Dockerfile/docker-compose.yml作成、DEPLOY.md作成、ビルド＆動作確認完了✓ |
 | 12. 改善・リファクタ | | | | 未実装 | |
+| 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
+| 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
+| 15. WebDAVタスク実装 | アーニャ | | | 未着手 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト完成 |
+| 16. OAuth削除・設定更新 | アーニャ | | | 未着手 | /auth/*エンドポイント削除、Google関連コード全削除、OAuth参照削除、Basic認証のみに統一 |
+| 17. Nextcloud統合テスト | アーニャ | | | 未着手 | 全API動作確認、フロントエンド統合テスト、エラーハンドリング検証、実環境接続テスト |
 
 ---
 
@@ -281,6 +288,218 @@
   - ユーザーからのフィードバックで改善
   - CI導入や自動テスト追加
 - 進捗: 
+
+### 13. GoogleからNextcloudへの移行計画
+- 目的: GoogleカレンダーとTasksをNextcloudのCalDAV/WebDAVに完全移行するます🥜
+- 完了条件: 移行計画が作成され、必要な変更点が明確になるます
+- 実施内容:
+  - 現在のGoogleサービスの利用箇所を洗い出しするます
+  - Nextcloud CalDAV/WebDAV API仕様の調査するます
+  - data/settings.json の構造変更計画（google → nextcloud）
+  - internal/services/google → internal/services/nextcloud への移行計画策定
+  - OAuth削除と Basic認証への切り替え計画
+  - 必要なGoライブラリの調査（CalDAV/WebDAVクライアント）
+- 進捗: 完了!✨ （2026-02-28）
+
+### 14. Nextcloud CalDAVクライアント実装
+- 目的: NextcloudのCalDAVプロトコルでカレンダーイベントを取得するます✨
+- 完了条件: /api/calendar エンドポイントがNextcloudから正しくデータ取得できるます
+- 実施内容:
+  - internal/services/nextcloud パッケージ作成
+  - CalDAVクライアント実装（Basic認証、HTTPリクエスト）
+  - カレンダーイベントの取得（今日〜7日分）
+  - iCalendar形式のパース（.ics → models.Event への変換）
+  - 既存APIレスポンス形式（models.CalendarResponse）と互換性維持
+  - 終日イベント/時間帯イベントの分類
+  - イベント色のマッピング（NextcloudのカラーIDに対応）
+  - サーバー側ソート実装（日付順）
+  - キャッシュ機能の統合（既存cache.Filecacheを使用）
+  - ユニットテスト作成（nextcloud_test.go）
+  - handlers.go, main.go への統合
+- 進捗: 完了!✨ （2026-02-28）
+  - client.go: Client構造体、NewClient、BasicAuth実装
+  - calendar.go: GetCalendarEvents、parseCalendarObject、convertToCalendarResponse実装
+  - iCalendarパース: 終日(YYYYMMDD)と時間指定(YYYYMMDDTHHmmss)に対応
+  - nextcloud_test.go: 9個のユニットテスト実装（すべてPASS✓）
+  - handlers.go: GetCalendarハンドラーをGoogleからNextcloudに切り替え
+  - main.go: Nextcloudクライアントのインスタンス化、コンテキスト統合
+  - settings.json: Nextcloud設定セクション追加
+  - ビルド: go build 成功 ✓
+  - テスト実行: go test ./internal/services/nextcloud/... 全9テストPASS ✓
+
+### 15. Nextcloud WebDAVタスク実装
+- 目的: NextcloudのCalDAV/WebDAVプロトコルでタスク（VTODO）を取得し、3段階ソートを実装するます🥜
+- 完了条件: /api/tasks エンドポイントがNextcloudから正しくタスク取得できて、サーバー側ソートが動作するます
+- 実施内容:
+  - tasks.go ファイルの完全実装
+    - GetTaskItems() 関数: Nextcloud WebDAV から VTODO 形式でタスク取得
+    - parseTaskObject() 関数: iCalendar の VTODO コンポーネント → models.TaskItem 変換
+    - parseDateTime() 関数: DUE日付パース（YYYYMMDD と YYYYMMDDTHHmmss 対応）
+    - parsePriority() 関数: PRIORITY 値（0-9） → HIGH / MEDIUM / LOW 変換
+    - sortTaskItems() 関数: 3段階ソート実装
+      - 第1段: 期限（DUE）が近い順、期限なしは最後
+      - 第2段: 優先度 HIGH > MEDIUM > LOW
+      - 第3段: createdAt の昇順（同条件時の安定性）
+    - キャッシュ統合: cache.FileCache を使って 5分 TTL でキャッシュ
+    - エラーハンドリング: 取得失敗時はキャッシュ返却（既存パターン踏襲）
+  - nextcloud_test.go への追加テスト
+    - TestGetTaskItems: 基本的なタスク取得テスト
+    - TestParseTaskObject: VTODO パースの正確性確認（複数タスク、優先度別）
+    - TestSortTaskItems: 3段階ソート動作確認
+      - 期限がない場合の最後配置
+      - 同じ期限での優先度ソート
+      - 同じ優先度での createdAt 昇順
+    - TestParsePriority: PRIORITY 値の変換確認（0=HIGH, 5=MEDIUM, 8=LOW など）
+    - すべてのテストを go test で実行可能に
+  - handlers.go への統合
+    - GetTasks ハンドラーを nextcloud.(*Client).GetTaskItems() に切り替え
+    - キャッシュキー: "nextcloud_tasks_items" に統一
+  - models.go への確認
+    - TaskItem 構造体が VTODO 属性に対応しているか確認
+    - 既存の models.TaskResponse 形式に合わせて使用
+- 進捗: 未着手
+  - [ ] tasks.go の完全実装
+  - [ ] parseTaskObject での VTODO コンポーネント処理
+  - [ ] parsePriority ロジックで HIGH/MEDIUM/LOW 決定
+  - [ ] sortTaskItems で確定的な 3段階ソート
+  - [ ] キャッシュ統合（Read/Write の 4戻り値パターン準拠）
+  - [ ] nextcloud_test.go で 4個以上のタスク関連テスト追加
+  - [ ] go test ./internal/services/nextcloud/... で全テスト PASS
+  - [ ] handlers.go で GetTasks 切り替え
+  - [ ] go build 成功、エラーなし
+  - [ ] API テスト確認（curl で /api/tasks 返却確認）
+
+### 16. OAuth削除・設定更新
+- 目的: Googleからのすべての認証機構を削除し、Nextcloud Basic認証のみに統一するます🥜
+- 完了条件: Google OAuth 関連コード、/auth/** エンドポイント、トークンファイル参照がすべて削除され、アプリが正常に起動・動作するます
+- 実施内容:
+  - handlers.go からの OAuth ハンドラー削除
+    - AuthLogin ハンドラー関数の削除（現在コメント化）
+    - AuthCallback ハンドラー関数の削除（現在コメント化）
+    - Google OAuth フロー関連のコメントも削除
+  - routes.go からの OAuth ルート削除
+    - /auth/login エンドポイント登録を削除
+    - /auth/callback エンドポイント登録を削除
+    - /auth グループがあればそれも削除
+  - main.go からの Google OAuth 初期化削除
+    - googleClient の生成・初期化コード削除
+    - LoadTokens() 呼び出し削除
+    - ctx.Set("google", ...) のコンテキスト登録削除
+  - internal/services/google パッケージの削除検討
+    - client.go, calendar.go, tasks.go, google_test.go を削除するか、ドキュメント化して保留するか判断
+    - 判断: 一旦 README に「このパッケージは互換性のため残している」とコメント
+  - data/tokens.json の削除
+    - Google トークン保存ファイルを削除
+    - 今後は Nextcloud 設定ファイル（settings.json）のみ使用
+  - config.go（internal/config/config.go）の更新
+    - Google 構造体は残し、互換性維持（空のまま）
+    - Nextcloud 構造体がメインである旨をコメント化
+  - copilot-instructions.md の更新
+    - 「外部プロバイダ」セクションの Google API 記述を削除
+    - Nextcloud CalDAV/WebDAV に集約
+  - ユニットテスト・ビルド確認
+    - go build -o familydashboard ./cmd/server で成功
+    - go test ./internal/... で既存テスト全PASS
+    - OAuth関連テストは削除
+- 進捗: 未着手
+  - [ ] handlers.go の AuthLogin/AuthCallback 削除
+  - [ ] routes.go の /auth/* 削除
+  - [ ] main.go の google クライアント初期化削除
+  - [ ] data/tokens.json 削除
+  - [ ] internal/services/google の状態決定（削除 or 残す）
+  - [ ] config.go の Nextcloud フォーカス化
+  - [ ] copilot-instructions.md の Google API 記述削除
+  - [ ] go build 成功、エラーなし
+  - [ ] go test 全テスト PASS
+  - [ ] grep で Google, OAuth, tokens.json 参照がないか確認
+
+### 17. Nextcloud統合テスト
+- 目的: 全API エンドポイント、キャッシュ、エラーハンドリング、フロントエンド表示を実環境で検証するます🥜
+- 完了条件: 実際のNextclouサーバーに接続して、すべてのデータが正しく取得でき、UIに表示されるます
+- 実施内容:
+  - 準備作業
+    - テスト用 Nextcloud サーバー環境の用意（ローカル or クラウド）
+    - Settings ファイルに Nextcloud サーバ情報を設定
+      - serverUrl: Nextcloud のアドレス（https://nextcloud.example.com など）
+      - username: テスト用ユーザー名
+      - password: テスト用パスワード
+      - calendarName: テスト用カレンダー（例: "family"）
+      - taskListName: テスト用タスクリスト（例: "tasks"）
+    - テスト用カレンダーに複数のイベント（終日・時間指定混在）を作成
+    - テスト用タスクリストに複数のタスク（優先度・期限別）を作成
+  - バックエンド API テスト
+    - GET /api/status
+      - レスポンス JSON の ok フィールド確認（true/false）
+      - lastUpdated フィールドのタイムスタンプ確認
+      - エラーが存在しないか確認（"errors": []）
+    - GET /api/calendar
+      - 今日〜7日のイベント取得確認
+      - 終日イベントと時間帯イベントの混在表示確認
+      - イベント色が返却されているか確認
+      - タイムゾーン Asia/Tokyo で正確に表示されるか確認
+    - GET /api/tasks
+      - タスク一覧取得確認
+      - 3段階ソート（期限→優先度→createdAt）の順序確認
+      - 期限切れタスク、期限なしタスクの正確な表示
+      - 優先度 HIGH/MEDIUM/LOW の判定確認
+    - GET /api/weather
+      - 天気データ取得確認（既存天気API、独立テスト）
+      - 気温、降水確率などが正確に取得されるか
+  - キャッシュ動作確認
+    - /api/calendar 取得 → cache/nextcloud_calendar_events.json 作成確認
+    - /api/tasks 取得 → cache/nextcloud_tasks_items.json 作成確認
+    - 2回目のリクエストでキャッシュから返却されるか確認
+    - TTL（5分）でキャッシュが更新されるか確認
+  - エラーハンドリング確認
+    - Nextcloud サーバーを停止 → バックエンド起動 → API 呼び出し
+      - キャッシュが存在する場合: 古いデータを返却しつつ error を挙げるか
+      - キャッシュが存在しない場合: エラーメッセージを返却するか
+    - Nextcloud 認証情報误り (password 間違い) → エラーログ確認
+    - ネットワーク遅延/タイムアウト → エラー記録とキャッシュ返却確認
+  - フロントエンド統合テスト
+    - ブラウザで http://localhost:8080 にアクセス
+    - Header コンポーネント
+      - 現在時刻（HH:MM）が Asia/Tokyo で正確に表示されるか
+      - 日付（MM月DD日(曜日)）が正確か
+      - エラーインジケーターが点灯した場合の点滅動作確認
+    - Calendar コンポーネント
+      - 今日〜7日分のイベント表示確認
+      - 終日イベントが日付欄の上部に表示されるか
+      - イベント色が正確に表示されるか（Nextcloud のカラー対応）
+      - タイムスタンプフォーマットが正確か（HH:mm-HH:mm など）
+    - Tasks コンポーネント
+      - 3段階ソート済みタスクが表示されるか
+      - 優先度による枠線色（HIGH=赤、MEDIUM=オレンジ、LOW=緑）が正確か
+      - 期限表示形式が正確か（YYYY-MM-DD など）
+      - 表示行数制限で「他 N 件」が表示されるか
+      - 期限切れタスクが強調表示されるか
+    - Weather コンポーネント
+      - 気温・天況が正確に表示されるか
+      - 時間ごと降水確率が正確か
+      - 警報がある場合、点滅インジケーター表示されるか
+  - UI/UX レスポンシブ確認
+    - FHD（1920x1080）解像度で表示確認
+    - 約2m 視聴距離でテキストが読みやすいか（フォントサイズ確認）
+    - 余白・レイアウトが適正か（左60% カレンダー、右40% 天気/タスク）
+    - スクロール不要か、固定レイアウトが保たれているか
+  - ビルド・デプロイ確認
+    - go build -o familydashboard ./cmd/server が成功するか
+    - ./familydashboard 実行でバックエンド起動
+    - 上記 API テスト全項目をクリア
+    - docker build, docker run での動作確認 (Raspberry Pi 環境など)
+- 進捗: 未着手
+  - [ ] Nextcloud サーバー環境の用意
+  - [ ] settings.json にNextcloud 情報を入力
+  - [ ] テスト用カレンダー/タスク作成
+  - [ ] /api/status レスポンス確認
+  - [ ] /api/calendar 取得と表示確認
+  - [ ] /api/tasks 取得、ソート、表示確認
+  - [ ] キャッシュファイル動作確認
+  - [ ] エラーハンドリング（サーバー停止、認証誤り、タイムアウト）確認
+  - [ ] フロントエンド各コンポーネント表示確認
+  - [ ] UI 視認性・レイアウト確認（FHD、2m 視聴距離）
+  - [ ] docker 環境でのビルド・起動確認
+  - [ ] すべてのテスト項目でOK の確認書作成
 
 ---
 
