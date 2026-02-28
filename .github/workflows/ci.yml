@@ -76,11 +76,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Node.js環境をセットアップ（18以上推奨）
+      # Node.js環境をセットアップ（最新LTS推奨、Vite要件）
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 'lts/*'
           cache: 'npm'
           cache-dependency-path: './frontend/package-lock.json'
 
