@@ -24,12 +24,12 @@ func TestLoadConfigSuccess(t *testing.T) {
 			"cityName": "姫路市",
 			"country": "JP"
 		},
-		"google": {
-			"clientId": "",
-			"clientSecret": "",
-			"redirectUri": "",
-			"calendarId": "",
-			"taskListId": ""
+		"nextcloud": {
+			"serverUrl": "https://nextcloud.example.com",
+			"username": "testuser",
+			"password": "testpass",
+			"calendarNames": ["family"],
+			"taskListNames": ["tasks"]
 		},
 		"weather": {
 			"provider": "",

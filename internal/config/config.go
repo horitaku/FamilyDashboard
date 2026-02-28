@@ -20,15 +20,6 @@ type Location struct {
 	Country  string `json:"country"`  // 国コード（例：JP）
 }
 
-// Google はGoogle APIの認証・設定を定義する構造体なのです。
-type Google struct {
-	ClientID     string `json:"clientId"`     // OAuth クライアントID
-	ClientSecret string `json:"clientSecret"` // OAuth クライアントシークレット
-	RedirectUri  string `json:"redirectUri"`  // OAuth リダイレクトURI
-	CalendarID   string `json:"calendarId"`   // Google カレンダーID（共有カレンダー）
-	TaskListID   string `json:"taskListId"`   // Google タスクリストID（共有タスクリスト）
-}
-
 // Nextcloud はNextcloud CalDAV/WebDAVの認証・設定を定義する構造体なのです。
 type Nextcloud struct {
 	ServerURL     string   `json:"serverUrl"`     // NextcloudサーバーURL（例: https://nextcloud.example.com）
@@ -49,7 +40,6 @@ type Weather struct {
 type Config struct {
 	RefreshIntervals RefreshIntervals `json:"refreshIntervals"` // 更新間隔設定
 	Location         Location         `json:"location"`         // ロケーション設定
-	Google           Google           `json:"google"`           // Google API設定（レガシー）
 	Nextcloud        Nextcloud        `json:"nextcloud"`        // Nextcloud CalDAV/WebDAV設定
 	Weather          Weather          `json:"weather"`          // 天気API設定
 	loadedAt         time.Time        // 設定の読み込み時刻（内部用）
@@ -152,7 +142,7 @@ func (c *Config) Validate() error {
 		fmt.Println("⚠️ TaskListNames が空のため、デフォルト値 ['tasks'] を設定しました")
 	}
 
-	// 注記: Google API設定・天気API設定は空の場合がある（後で埋める可能性があるため）
+	// 注記: 天気API設定は空の場合がある（後で埋める可能性があるため）
 	// ここではスキップするます。
 
 	return nil

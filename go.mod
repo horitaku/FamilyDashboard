@@ -3,14 +3,17 @@ module github.com/rihow/FamilyDashboard
 go 1.23.0
 
 require (
+	github.com/emersion/go-ical v0.0.0-20250609112844-439c63cef608
+	github.com/emersion/go-webdav v0.7.0
+	github.com/gin-gonic/gin v1.11.0
+)
+
+require (
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/emersion/go-ical v0.0.0-20250609112844-439c63cef608 // indirect
-	github.com/emersion/go-webdav v0.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
-	github.com/gin-gonic/gin v1.11.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.27.0 // indirect
