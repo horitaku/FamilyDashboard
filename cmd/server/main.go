@@ -64,10 +64,10 @@ func main() {
 	httproutes.SetupRoutes(router)
 
 	// 静的ファイル配信の設定（Svelte ビルド成果物を配信）
-	// 環境変数 FRONTEND_DIST_PATH でディレクトリを指定可能（デフォルト: ./frontend/dist）
+	// 環境変数 FRONTEND_DIST_PATH でディレクトリを指定可能（デフォルト: ./frontend/build、vite.config.js で指定）
 	frontendDistPath := os.Getenv("FRONTEND_DIST_PATH")
 	if frontendDistPath == "" {
-		frontendDistPath = "./frontend/dist"
+		frontendDistPath = "./frontend/build"
 	}
 
 	// assetsディレクトリを配信（JS/CSS/画像など）
