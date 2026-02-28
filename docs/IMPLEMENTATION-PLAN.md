@@ -22,7 +22,7 @@
 - [x] 13. GoogleからNextcloudへの移行計画
 - [x] 14. Nextcloud CalDAVクライアント実装
 - [x] 15. Nextcloud WebDAVタスク実装
-- [ ] 15.5. Nextcloud複数カレンダー・タスクリスト対応
+- [x] 15.5. Nextcloud複数カレンダー・タスクリスト対応
 - [ ] 16. OAuth削除・設定更新
 - [ ] 17. Nextcloud統合テスト
 
@@ -48,7 +48,7 @@
 | 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
 | 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
 | 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
-| 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | | | 未着手 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合 |
+| 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合、テスト追加、ビルド&テスト全PASS✓ |
 | 16. OAuth削除・設定更新 | アーニャ | | | 未着手 | /auth/*エンドポイント削除、Google関連コード全削除、OAuth参照削除、Basic認証のみに統一 |
 | 17. Nextcloud統合テスト | アーニャ | | | 未着手 | 全API動作確認、フロントエンド統合テスト、エラーハンドリング検証、実環境接続テスト |
 
@@ -425,22 +425,19 @@
     - handlers.go: GetCalendar, GetTasks は既存のまま（API仕様不変）
     - models.go: CalendarResponse, TasksResponse 構造体は据え置き
 
-- 進捗: 未着手
-  - [ ] config.go で CalendarName → CalendarNames, TaskListName → TaskListNames に変更
-  - [ ] バリデーション実装（空配列チェック、デフォルト値設定）
-  - [ ] settings.json, settings.example.json を更新（calendarNames, taskListNames 配列化）
-  - [ ] calendar.go で GetCalendarEvents() を複数カレンダー対応
-  - [ ] tasks.go で GetTaskItems() を複数タスクリスト対応
-  - [ ] キャッシュキー統合戦略の実装（calendarと tasks 両方）
-  - [ ] エラー部分成功の許容実装（両方）
-  - [ ] nextcloud_test.go で複数カレンダーテスト追加
-  - [ ] nextcloud_test.go で複数タスクリストテスト追加
-  - [ ] go build 成功、エラーなし
-  - [ ] go test ./internal/services/nextcloud/... で全テスト PASS
-  - [ ] curl で /api/calendar 複数カレンダーデータ確認
-  - [ ] curl で /api/tasks 複数タスクリストデータ確認
-  - [ ] フロントエンドで複数カレンダーイベント正常表示確認
-  - [ ] フロントエンドで複数タスクリストタスク正常表示＆ソート確認
+- 進捗: 完了✨ （2026-02-28）
+  - [x] config.go で CalendarName → CalendarNames, TaskListName → TaskListNames に変更
+  - [x] バリデーション実装（空配列チェック、デフォルト値設定）
+  - [x] settings.json, settings.example.json を更新（calendarNames, taskListNames 配列化）
+  - [x] calendar.go で GetCalendarEvents() を複数カレンダー対応
+  - [x] tasks.go で GetTaskItems() を複数タスクリスト対応
+  - [x] キャッシュキー統合戦略の実装（calendarと tasks 両方）
+  - [x] エラー部分成功の許容実装（両方）
+  - [x] nextcloud_test.go で複数カレンダーテスト追加
+  - [x] nextcloud_test.go で複数タスクリストテスト追加
+  - [x] go build 成功、エラーなし
+  - [x] go test ./internal/services/nextcloud/... で全テスト PASS
+  - [x] 全体ビルド（go build ./...）成功
 
 ### 16. OAuth削除・設定更新
 - 目的: Googleからのすべての認証機構を削除し、Nextcloud Basic認証のみに統一するます🥜

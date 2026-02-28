@@ -80,9 +80,8 @@ func (t *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error
 
 // getCalendarPath はカレンダーのCalDAVパスを返すます。
 // Nextcloudの標準パス: /remote.php/dav/calendars/USERNAME/CALENDARNAME/
-func (c *Client) getCalendarPath() string {
+func (c *Client) getCalendarPath(calendarName string) string {
 	username := c.config.Nextcloud.Username
-	calendarName := c.config.Nextcloud.CalendarName
 	if calendarName == "" {
 		calendarName = "personal" // デフォルトカレンダー
 	}
@@ -91,9 +90,8 @@ func (c *Client) getCalendarPath() string {
 
 // getTasksPath はタスクのCalDAVパスを返すます。
 // Nextcloudの標準パス: /remote.php/dav/calendars/USERNAME/TASKLISTNAME/
-func (c *Client) getTasksPath() string {
+func (c *Client) getTasksPath(taskListName string) string {
 	username := c.config.Nextcloud.Username
-	taskListName := c.config.Nextcloud.TaskListName
 	if taskListName == "" {
 		taskListName = "tasks" // デフォルトタスクリスト
 	}

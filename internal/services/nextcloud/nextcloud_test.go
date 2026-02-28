@@ -14,11 +14,11 @@ func TestNewClient(t *testing.T) {
 	// テスト用設定を作成
 	cfg := &config.Config{
 		Nextcloud: config.Nextcloud{
-			ServerURL:    "https://nextcloud.example.com",
-			Username:     "testuser",
-			Password:     "testpass",
-			CalendarName: "family",
-			TaskListName: "tasks",
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			CalendarNames: []string{"family"},
+			TaskListNames: []string{"tasks"},
 		},
 	}
 
@@ -197,17 +197,17 @@ func TestSortTasks(t *testing.T) {
 func TestGetCalendarPath(t *testing.T) {
 	cfg := &config.Config{
 		Nextcloud: config.Nextcloud{
-			ServerURL:    "https://nextcloud.example.com",
-			Username:     "testuser",
-			Password:     "testpass",
-			CalendarName: "family",
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			CalendarNames: []string{"family"},
 		},
 	}
 
 	fc := cache.New("./test_cache")
 	client, _ := NewClient(fc, cfg)
 
-	path := client.getCalendarPath()
+	path := client.getCalendarPath("family")
 	expected := "/remote.php/dav/calendars/testuser/family/"
 
 	if path != expected {
@@ -219,17 +219,17 @@ func TestGetCalendarPath(t *testing.T) {
 func TestGetTasksPath(t *testing.T) {
 	cfg := &config.Config{
 		Nextcloud: config.Nextcloud{
-			ServerURL:    "https://nextcloud.example.com",
-			Username:     "testuser",
-			Password:     "testpass",
-			TaskListName: "tasks",
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			TaskListNames: []string{"tasks"},
 		},
 	}
 
 	fc := cache.New("./test_cache")
 	client, _ := NewClient(fc, cfg)
 
-	path := client.getTasksPath()
+	path := client.getTasksPath("tasks")
 	expected := "/remote.php/dav/calendars/testuser/tasks/"
 
 	if path != expected {
@@ -254,6 +254,116 @@ func TestParsePriority(t *testing.T) {
 		result := parsePriority(tt.input)
 		if result != tt.expected {
 			t.Errorf("parsePriority(%s): got %d, want %d", tt.input, result, tt.expected)
+		}
+	}
+}
+
+// TestMultipleCalendarPaths は複数カレンダー名でパス生成のテストなのです。
+func TestMultipleCalendarPaths(t *testing.T) {
+	cfg := &config.Config{
+		Nextcloud: config.Nextcloud{
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			CalendarNames: []string{"family", "work", "personal"},
+		},
+	}
+
+	fc := cache.New("./test_cache")
+	client, _ := NewClient(fc, cfg)
+
+	// 複数カレンダー名をテスト
+	tests := []struct {
+		calendarName string
+		expectedPath string
+	}{
+		{"family", "/remote.php/dav/calendars/testuser/family/"},
+		{"work", "/remote.php/dav/calendars/testuser/work/"},
+		{"personal", "/remote.php/dav/calendars/testuser/personal/"},
+	}
+
+	for _, tt := range tests {
+		path := client.getCalendarPath(tt.calendarName)
+		if path != tt.expectedPath {
+			t.Errorf("カレンダーパス不一致 (%s): got %s, want %s", tt.calendarName, path, tt.expectedPath)
+		}
+	}
+}
+
+// TestMultipleTaskListPaths は複数タスクリスト名でパス生成のテストなのです。
+func TestMultipleTaskListPaths(t *testing.T) {
+	cfg := &config.Config{
+		Nextcloud: config.Nextcloud{
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			TaskListNames: []string{"tasks", "personal", "work"},
+		},
+	}
+
+	fc := cache.New("./test_cache")
+	client, _ := NewClient(fc, cfg)
+
+	// 複数タスクリスト名をテスト
+	tests := []struct {
+		taskListName string
+		expectedPath string
+	}{
+		{"tasks", "/remote.php/dav/calendars/testuser/tasks/"},
+		{"personal", "/remote.php/dav/calendars/testuser/personal/"},
+		{"work", "/remote.php/dav/calendars/testuser/work/"},
+	}
+
+	for _, tt := range tests {
+		path := client.getTasksPath(tt.taskListName)
+		if path != tt.expectedPath {
+			t.Errorf("タスクパス不一致 (%s): got %s, want %s", tt.taskListName, path, tt.expectedPath)
+		}
+	}
+}
+
+// TestGetCalendarNames は設定から複数カレンダー名を取得するテストなのです。
+func TestGetCalendarNames(t *testing.T) {
+	cfg := &config.Config{
+		Nextcloud: config.Nextcloud{
+			CalendarNames: []string{"family", "work", "personal"},
+		},
+	}
+
+	names := cfg.GetCalendarNames()
+	expected := []string{"family", "work", "personal"}
+
+	if len(names) != len(expected) {
+		t.Errorf("カレンダー名数不一致: got %d, want %d", len(names), len(expected))
+		return
+	}
+
+	for i, name := range names {
+		if name != expected[i] {
+			t.Errorf("カレンダー名不一致 [%d]: got %s, want %s", i, name, expected[i])
+		}
+	}
+}
+
+// TestGetTaskListNames は設定から複数タスクリスト名を取得するテストなのです。
+func TestGetTaskListNames(t *testing.T) {
+	cfg := &config.Config{
+		Nextcloud: config.Nextcloud{
+			TaskListNames: []string{"tasks", "personal", "shopping"},
+		},
+	}
+
+	names := cfg.GetTaskListNames()
+	expected := []string{"tasks", "personal", "shopping"}
+
+	if len(names) != len(expected) {
+		t.Errorf("タスクリスト名数不一致: got %d, want %d", len(names), len(expected))
+		return
+	}
+
+	for i, name := range names {
+		if name != expected[i] {
+			t.Errorf("タスクリスト名不一致 [%d]: got %s, want %s", i, name, expected[i])
 		}
 	}
 }

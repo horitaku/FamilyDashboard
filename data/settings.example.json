@@ -19,8 +19,8 @@
 		"serverUrl": "https://nextcloud.example.com",
 		"username": "YOUR_NEXTCLOUD_USERNAME",
 		"password": "YOUR_NEXTCLOUD_APP_PASSWORD",
-		"calendarName": "family",
-		"taskListName": "tasks"
+		"calendarNames": ["family", "work"],
+		"taskListNames": ["tasks", "personal"]
 	},
 	"weather": {
 		"provider": "openmeteo",

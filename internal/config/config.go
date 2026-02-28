@@ -31,11 +31,11 @@ type Google struct {
 
 // Nextcloud はNextcloud CalDAV/WebDAVの認証・設定を定義する構造体なのです。
 type Nextcloud struct {
-	ServerURL    string `json:"serverUrl"`    // NextcloudサーバーURL（例: https://nextcloud.example.com）
-	Username     string `json:"username"`     // ユーザー名
-	Password     string `json:"password"`     // パスワード または アプリパスワード
-	CalendarName string `json:"calendarName"` // カレンダー名（共有カレンダー）
-	TaskListName string `json:"taskListName"` // タスクリスト名（共有タスクリスト）
+	ServerURL     string   `json:"serverUrl"`     // NextcloudサーバーURL（例: https://nextcloud.example.com）
+	Username      string   `json:"username"`      // ユーザー名
+	Password      string   `json:"password"`      // パスワード または アプリパスワード
+	CalendarNames []string `json:"calendarNames"` // カレンダー名のリスト（複数カレンダー対応）
+	TaskListNames []string `json:"taskListNames"` // タスクリスト名のリスト（複数タスクリスト対応）
 }
 
 // Weather は天気APIの設定を定義する構造体なのです。
@@ -77,6 +77,16 @@ func (c *Config) GetLocationString() string {
 		return "Unknown"
 	}
 	return fmt.Sprintf("%s, %s", c.Location.CityName, c.Location.Country)
+}
+
+// GetCalendarNames はNextcloudカレンダー名のリストを返すます。
+func (c *Config) GetCalendarNames() []string {
+	return c.Nextcloud.CalendarNames
+}
+
+// GetTaskListNames はNextcloudタスクリスト名のリストを返すます。
+func (c *Config) GetTaskListNames() []string {
+	return c.Nextcloud.TaskListNames
 }
 
 // LoadedAt は設定の読み込み時刻を返すます。
@@ -128,6 +138,18 @@ func (c *Config) Validate() error {
 	}
 	if c.Location.Country == "" {
 		return fmt.Errorf("location.country は必須フィールドです")
+	}
+
+	// Nextcloud 設定の妥当性チェック＆デフォルト値設定
+	if len(c.Nextcloud.CalendarNames) == 0 {
+		// 空配列の場合はデフォルト値を設定するます
+		c.Nextcloud.CalendarNames = []string{"family"}
+		fmt.Println("⚠️ CalendarNames が空のため、デフォルト値 ['family'] を設定しました")
+	}
+	if len(c.Nextcloud.TaskListNames) == 0 {
+		// 空配列の場合はデフォルト値を設定するます
+		c.Nextcloud.TaskListNames = []string{"tasks"}
+		fmt.Println("⚠️ TaskListNames が空のため、デフォルト値 ['tasks'] を設定しました")
 	}
 
 	// 注記: Google API設定・天気API設定は空の場合がある（後で埋める可能性があるため）

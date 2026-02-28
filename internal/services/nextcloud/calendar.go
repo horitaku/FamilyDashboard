@@ -14,9 +14,9 @@ import (
 )
 
 // GetCalendarEvents はNextcloud CalDAVからカレンダーイベントを取得するます。
-// 今日から7日分のイベントを取得し、終日/時間帯別に分類して返すのです。
+// 複数のカレンダーから今日から7日分のイベントを取得し、終日/時間帯別に分類して返すのです。
 func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarResponse, error) {
-	cacheKey := "nextcloud_calendar_events"
+	cacheKey := "nextcloud_calendar_events_all"
 	ttl := c.config.GetRefreshInterval("calendar")
 
 	// キャッシュを確認するます
@@ -30,8 +30,13 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 		fmt.Printf("⚠️ キャッシュデータのパース失敗: %v\n", err)
 	}
 
-	// キャッシュがない、または期限切れの場合はAPIから取得するます
-	fmt.Println("🌐 Nextcloud CalDAV からカレンダーを取得するます...")
+	// 複数カレンダー名を取得するます
+	calendarNames := c.config.GetCalendarNames()
+	if len(calendarNames) == 0 {
+		return nil, fmt.Errorf("カレンダー名が設定されていません")
+	}
+
+	fmt.Printf("🌐 Nextcloud CalDAV から %d 個のカレンダーを取得するます...\n", len(calendarNames))
 
 	// 今日から7日分の範囲を設定（Asia/Tokyo）
 	loc, _ := time.LoadLocation("Asia/Tokyo")
@@ -39,62 +44,83 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	endDate := startDate.AddDate(0, 0, 7)
 
-	// CalDAVクエリを実行するます
-	calendarPath := c.getCalendarPath()
-	query := &caldav.CalendarQuery{
-		CompRequest: caldav.CalendarCompRequest{
-			Name: "VCALENDAR",
-			Comps: []caldav.CalendarCompRequest{
-				{
-					Name:  "VEVENT",
-					Props: []string{"UID", "SUMMARY", "DTSTART", "DTEND", "DESCRIPTION", "COLOR"},
+	// 全カレンダーからイベントを収集するます
+	allEvents := []eventWithDate{}
+	var fetchErrors []error
+
+	for _, calendarName := range calendarNames {
+		fmt.Printf("  📅 カレンダー '%s' からイベント取得中...\n", calendarName)
+
+		// CalDAVクエリを実行するます
+		calendarPath := c.getCalendarPath(calendarName)
+		query := &caldav.CalendarQuery{
+			CompRequest: caldav.CalendarCompRequest{
+				Name: "VCALENDAR",
+				Comps: []caldav.CalendarCompRequest{
+					{
+						Name:  "VEVENT",
+						Props: []string{"UID", "SUMMARY", "DTSTART", "DTEND", "DESCRIPTION", "COLOR"},
+					},
 				},
 			},
-		},
-		CompFilter: caldav.CompFilter{
-			Name: "VCALENDAR",
-			Comps: []caldav.CompFilter{
-				{
-					Name: "VEVENT",
-					Start: startDate,
-					End:   endDate,
+			CompFilter: caldav.CompFilter{
+				Name: "VCALENDAR",
+				Comps: []caldav.CompFilter{
+					{
+						Name: "VEVENT",
+						Start: startDate,
+						End:   endDate,
+					},
 				},
 			},
-		},
+		}
+
+		calendarObjects, err := c.caldavClient.QueryCalendar(ctx, calendarPath, query)
+		if err != nil {
+			// エラーを記録するが続行するます（部分的成功を許容）
+			fmt.Printf("❌ カレンダー '%s' のCalDAVクエリエラー: %v\n", calendarName, err)
+			fetchErrors = append(fetchErrors, fmt.Errorf("calendar '%s': %w", calendarName, err))
+			continue
+		}
+
+		// iCalendarオブジェクトをパースして構造化するます
+		for _, obj := range calendarObjects {
+			parsedEvents := parseCalendarObject(obj.Data, startDate, endDate)
+			allEvents = append(allEvents, parsedEvents...)
+		}
+
+		fmt.Printf("  ✅ カレンダー '%s' から %d 件のイベント取得\n", calendarName, len(calendarObjects))
 	}
 
-	calendarObjects, err := c.caldavClient.QueryCalendar(ctx, calendarPath, query)
-	if err != nil {
+	// すべてのカレンダー取得に失敗した場合
+	if len(allEvents) == 0 && len(fetchErrors) > 0 {
 		// エラー時はキャッシュから返す試みをするます
-		fmt.Printf("❌ CalDAV クエリエラー: %v\n", err)
+		fmt.Println("❌ すべてのカレンダー取得に失敗しました")
 		entry, ok, _, readErr := c.cache.Read(cacheKey, 0)
 		if ok && readErr == nil {
 			fmt.Println("📦 期限切れキャッシュを返すます")
 			var resp models.CalendarResponse
 			if unmarshalErr := json.Unmarshal(entry.Payload, &resp); unmarshalErr == nil {
-				return &resp, fmt.Errorf("CalDAVクエリ失敗（キャッシュ返却）: %w", err)
+				return &resp, fmt.Errorf("全カレンダー取得失敗（キャッシュ返却）: %d エラー", len(fetchErrors))
 			}
 		}
-		return nil, fmt.Errorf("CalDAVクエリ失敗: %w", err)
-	}
-
-	// iCalendarオブジェクトをパースして構造化するます
-	events := []eventWithDate{}
-	for _, obj := range calendarObjects {
-		parsedEvents := parseCalendarObject(obj.Data, startDate, endDate)
-		events = append(events, parsedEvents...)
+		return nil, fmt.Errorf("全カレンダー取得失敗: %d エラー", len(fetchErrors))
 	}
 
 	// 日付ごとにイベントを分類するます
-	response := convertToCalendarResponse(events, startDate, endDate)
+	response := convertToCalendarResponse(allEvents, startDate, endDate)
 
 	// キャッシュに保存するます
-	meta := map[string]string{"source": "nextcloud_calendar"}
+	meta := map[string]string{"source": "nextcloud_calendar_all"}
 	if _, err := c.cache.Write(cacheKey, response, meta); err != nil {
 		fmt.Printf("⚠️ キャッシュ保存失敗: %v\n", err)
 	}
 
-	fmt.Printf("✅ カレンダーイベント取得成功: %d日分\n", len(response.Days))
+	fmt.Printf("✅ 統合カレンダーイベント取得成功: %d日分、合計 %d イベント\n", len(response.Days), len(allEvents))
+	if len(fetchErrors) > 0 {
+		fmt.Printf("⚠️ 一部のカレンダーで取得エラーがありました: %d 件\n", len(fetchErrors))
+	}
+
 	return response, nil
 }
 

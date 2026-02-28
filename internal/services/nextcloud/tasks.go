@@ -14,9 +14,9 @@ import (
 )
 
 // GetTaskItems はNextcloud WebDAVからタスクアイテムを取得するます。
-// VTODOコンポーネントを取得し、サーバー側でソート（期限→優先度→作成日時）して返すのです。
+// 複数のタスクリストからVTODOコンポーネントを取得し、サーバー側でソート（期限→優先度→作成日時）して返すのです。
 func (c *Client) GetTaskItems(ctx context.Context) (*models.TasksResponse, error) {
-	cacheKey := "nextcloud_tasks_items"
+	cacheKey := "nextcloud_tasks_items_all"
 	ttl := c.config.GetRefreshInterval("tasks")
 
 	// キャッシュを確認するます
@@ -30,67 +30,93 @@ func (c *Client) GetTaskItems(ctx context.Context) (*models.TasksResponse, error
 		fmt.Printf("⚠️ キャッシュデータのパース失敗: %v\n", err)
 	}
 
-	// キャッシュがない、または期限切れの場合はAPIから取得するます
-	fmt.Println("🌐 Nextcloud WebDAV からタスクを取得するます...")
-
-	// CalDAVクエリを実行（VTODOコンポーネント取得）
-	tasksPath := c.getTasksPath()
-	query := &caldav.CalendarQuery{
-		CompRequest: caldav.CalendarCompRequest{
-			Name: "VCALENDAR",
-			Comps: []caldav.CalendarCompRequest{
-				{
-					Name:  "VTODO",
-					Props: []string{"UID", "SUMMARY", "STATUS", "PRIORITY", "DUE", "CREATED", "DESCRIPTION"},
-				},
-			},
-		},
-		CompFilter: caldav.CompFilter{
-			Name: "VCALENDAR",
-			Comps: []caldav.CompFilter{
-				{
-					Name: "VTODO",
-				},
-			},
-		},
+	// 複数タスクリスト名を取得するます
+	taskListNames := c.config.GetTaskListNames()
+	if len(taskListNames) == 0 {
+		return nil, fmt.Errorf("タスクリスト名が設定されていません")
 	}
 
-	calendarObjects, err := c.caldavClient.QueryCalendar(ctx, tasksPath, query)
-	if err != nil {
+	fmt.Printf("🌐 Nextcloud WebDAV から %d 個のタスクリストを取得するます...\n", len(taskListNames))
+
+	// 全タスクリストからタスクを収集するます
+	allTasks := []models.TaskItem{}
+	var fetchErrors []error
+
+	for _, taskListName := range taskListNames {
+		fmt.Printf("  ✅ タスクリスト '%s' からタスク取得中...\n", taskListName)
+
+		// CalDAVクエリを実行（VTODOコンポーネント取得）
+		tasksPath := c.getTasksPath(taskListName)
+		query := &caldav.CalendarQuery{
+			CompRequest: caldav.CalendarCompRequest{
+				Name: "VCALENDAR",
+				Comps: []caldav.CalendarCompRequest{
+					{
+						Name:  "VTODO",
+						Props: []string{"UID", "SUMMARY", "STATUS", "PRIORITY", "DUE", "CREATED", "DESCRIPTION"},
+					},
+				},
+			},
+			CompFilter: caldav.CompFilter{
+				Name: "VCALENDAR",
+				Comps: []caldav.CompFilter{
+					{
+						Name: "VTODO",
+					},
+				},
+			},
+		}
+
+		calendarObjects, err := c.caldavClient.QueryCalendar(ctx, tasksPath, query)
+		if err != nil {
+			// エラーを記録するが続行するます（部分的成功を許容）
+			fmt.Printf("❌ タスクリスト '%s' のWebDAVクエリエラー: %v\n", taskListName, err)
+			fetchErrors = append(fetchErrors, fmt.Errorf("tasklist '%s': %w", taskListName, err))
+			continue
+		}
+
+		// iCalendar VTODO オブジェクトをパースして構造化するます
+		for _, obj := range calendarObjects {
+			parsedTasks := parseTaskObject(obj.Data)
+			allTasks = append(allTasks, parsedTasks...)
+		}
+
+		fmt.Printf("  ✅ タスクリスト '%s' から %d 件のタスク取得\n", taskListName, len(calendarObjects))
+	}
+
+	// すべてのタスクリスト取得に失敗した場合
+	if len(allTasks) == 0 && len(fetchErrors) > 0 {
 		// エラー時はキャッシュから返す試みをするます
-		fmt.Printf("❌ WebDAV クエリエラー: %v\n", err)
+		fmt.Println("❌ すべてのタスクリスト取得に失敗しました")
 		entry, ok, _, readErr := c.cache.Read(cacheKey, 0)
 		if ok && readErr == nil {
 			fmt.Println("📦 期限切れキャッシュを返すます")
 			var resp models.TasksResponse
 			if unmarshalErr := json.Unmarshal(entry.Payload, &resp); unmarshalErr == nil {
-				return &resp, fmt.Errorf("WebDAVクエリ失敗（キャッシュ返却）: %w", err)
+				return &resp, fmt.Errorf("全タスクリスト取得失敗（キャッシュ返却）: %d エラー", len(fetchErrors))
 			}
 		}
-		return nil, fmt.Errorf("WebDAVクエリ失敗: %w", err)
-	}
-
-	// iCalendar VTODO オブジェクトをパースして構造化するます
-	tasks := []models.TaskItem{}
-	for _, obj := range calendarObjects {
-		parsedTasks := parseTaskObject(obj.Data)
-		tasks = append(tasks, parsedTasks...)
+		return nil, fmt.Errorf("全タスクリスト取得失敗: %d エラー", len(fetchErrors))
 	}
 
 	// サーバー側ソート: 期限→優先度→作成日時
-	sortTasks(tasks)
+	sortTasks(allTasks)
 
 	response := &models.TasksResponse{
-		Items: tasks,
+		Items: allTasks,
 	}
 
 	// キャッシュに保存するます
-	meta := map[string]string{"source": "nextcloud_tasks"}
+	meta := map[string]string{"source": "nextcloud_tasks_all"}
 	if _, err := c.cache.Write(cacheKey, response, meta); err != nil {
 		fmt.Printf("⚠️ キャッシュ保存失敗: %v\n", err)
 	}
 
-	fmt.Printf("✅ タスク取得成功: %d件\n", len(tasks))
+	fmt.Printf("✅ 統合タスク取得成功: 合計 %d 件\n", len(allTasks))
+	if len(fetchErrors) > 0 {
+		fmt.Printf("⚠️ 一部のタスクリストで取得エラーがありました: %d 件\n", len(fetchErrors))
+	}
+
 	return response, nil
 }
 
