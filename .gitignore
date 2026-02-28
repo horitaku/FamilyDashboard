@@ -26,6 +26,8 @@ go.work
 go.work.sum
 server
 server.exe
+familydashboard
+familydashboard.exe
 
 # Track cmd/server even if a global ignore rule exists
 !cmd/server/
