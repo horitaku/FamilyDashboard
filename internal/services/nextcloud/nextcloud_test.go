@@ -1,9 +1,11 @@
 package nextcloud
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/emersion/go-ical"
 	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
@@ -366,4 +368,91 @@ func TestGetTaskListNames(t *testing.T) {
 			t.Errorf("タスクリスト名不一致 [%d]: got %s, want %s", i, name, expected[i])
 		}
 	}
+}
+
+// TestNormalizeHexColor は色コード正規化のテストなのです。
+func TestNormalizeHexColor(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		want     string
+		wantOK   bool
+	}{
+		{name: "RRGGBB", input: "#0082c9", want: "#0082C9", wantOK: true},
+		{name: "RRGGBBAA", input: "#0082c9ff", want: "#0082C9", wantOK: true},
+		{name: "RGB", input: "#3af", want: "#33AAFF", wantOK: true},
+		{name: "no prefix", input: "ff8800", want: "#FF8800", wantOK: true},
+		{name: "invalid", input: "#xyz123", want: "", wantOK: false},
+		{name: "empty", input: "", want: "", wantOK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := normalizeHexColor(tt.input)
+			if ok != tt.wantOK {
+				t.Fatalf("ok不一致: got %v, want %v", ok, tt.wantOK)
+			}
+			if got != tt.want {
+				t.Fatalf("色不一致: got %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseCalendarObjectColorPrecedence は色優先順位（イベント色 > カレンダー色 > デフォルト）のテストなのです。
+func TestParseCalendarObjectColorPrecedence(t *testing.T) {
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	startDate := time.Date(2026, 2, 28, 0, 0, 0, 0, loc)
+	endDate := startDate.AddDate(0, 0, 7)
+
+	decodeCalendar := func(t *testing.T, raw string) *ical.Calendar {
+		t.Helper()
+		cal, err := ical.NewDecoder(strings.NewReader(raw)).Decode()
+		if err != nil {
+			t.Fatalf("iCalendarデコード失敗: %v", err)
+		}
+		return cal
+	}
+
+	t.Run("event color has priority", func(t *testing.T) {
+		raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-1\nSUMMARY:Event Color\nDTSTART:20260301T090000\nDTEND:20260301T100000\nCOLOR:#ff0000\nEND:VEVENT\nEND:VCALENDAR\n"
+		cal := decodeCalendar(t, raw)
+
+		events := parseCalendarObject(cal, startDate, endDate, "family", "#00ff00")
+		if len(events) != 1 {
+			t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+		}
+
+		if events[0].event.Color != "#FF0000" {
+			t.Fatalf("イベント色優先失敗: got %s, want %s", events[0].event.Color, "#FF0000")
+		}
+	})
+
+	t.Run("fallback to calendar color", func(t *testing.T) {
+		raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-2\nSUMMARY:Calendar Color\nDTSTART:20260301T110000\nDTEND:20260301T120000\nEND:VEVENT\nEND:VCALENDAR\n"
+		cal := decodeCalendar(t, raw)
+
+		events := parseCalendarObject(cal, startDate, endDate, "family", "#0082c9ff")
+		if len(events) != 1 {
+			t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+		}
+
+		if events[0].event.Color != "#0082C9" {
+			t.Fatalf("カレンダー色フォールバック失敗: got %s, want %s", events[0].event.Color, "#0082C9")
+		}
+	})
+
+	t.Run("fallback to default color", func(t *testing.T) {
+		raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-3\nSUMMARY:Default Color\nDTSTART:20260301T130000\nDTEND:20260301T140000\nEND:VEVENT\nEND:VCALENDAR\n"
+		cal := decodeCalendar(t, raw)
+
+		events := parseCalendarObject(cal, startDate, endDate, "family", "invalid-color")
+		if len(events) != 1 {
+			t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+		}
+
+		if events[0].event.Color != "#3788d8" {
+			t.Fatalf("デフォルト色フォールバック失敗: got %s, want %s", events[0].event.Color, "#3788d8")
+		}
+	})
 }

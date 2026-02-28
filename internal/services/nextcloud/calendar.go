@@ -1,9 +1,13 @@
 package nextcloud
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -53,6 +57,11 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 
 		// CalDAVクエリを実行するます
 		calendarPath := c.getCalendarPath(calendarName)
+		calendarColor, colorErr := c.getCalendarColor(ctx, calendarPath)
+		if colorErr != nil {
+			fmt.Printf("⚠️ カレンダー '%s' の色取得失敗: %v\n", calendarName, colorErr)
+		}
+
 		query := &caldav.CalendarQuery{
 			CompRequest: caldav.CalendarCompRequest{
 				Name: "VCALENDAR",
@@ -85,7 +94,7 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 
 		// iCalendarオブジェクトをパースして構造化するます
 		for _, obj := range calendarObjects {
-			parsedEvents := parseCalendarObject(obj.Data, startDate, endDate)
+			parsedEvents := parseCalendarObject(obj.Data, startDate, endDate, calendarName, calendarColor)
 			allEvents = append(allEvents, parsedEvents...)
 		}
 
@@ -124,6 +133,83 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 	return response, nil
 }
 
+// getCalendarColor はカレンダーコレクションの色（calendar-color）を取得するます。
+// Nextcloud は calendar-color を #RRGGBB または #RRGGBBAA で返すことがあるのです。
+func (c *Client) getCalendarColor(ctx context.Context, calendarPath string) (string, error) {
+	requestBody := `<?xml version="1.0" encoding="UTF-8"?>
+<d:propfind xmlns:d="DAV:" xmlns:a="http://apple.com/ns/ical/">
+	<d:prop>
+		<a:calendar-color/>
+	</d:prop>
+</d:propfind>`
+
+	targetURL, err := c.resolveDAVURL(calendarPath)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PROPFIND", targetURL, bytes.NewBufferString(requestBody))
+	if err != nil {
+		return "", fmt.Errorf("calendar color request作成失敗: %w", err)
+	}
+	req.Header.Set("Depth", "0")
+	req.Header.Set("Content-Type", "application/xml; charset=utf-8")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("calendar color取得失敗: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusMultiStatus && resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("calendar color取得HTTPエラー: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Responses []struct {
+			PropStats []struct {
+				Status string `xml:"status"`
+				Prop   struct {
+					CalendarColor string `xml:"http://apple.com/ns/ical/ calendar-color"`
+				} `xml:"prop"`
+			} `xml:"propstat"`
+		} `xml:"response"`
+	}
+
+	if err := xml.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("calendar colorレスポンス解析失敗: %w", err)
+	}
+
+	for _, response := range result.Responses {
+		for _, propStat := range response.PropStats {
+			if !strings.Contains(propStat.Status, "200") {
+				continue
+			}
+
+			if normalized, ok := normalizeHexColor(propStat.Prop.CalendarColor); ok {
+				return normalized, nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
+// resolveDAVURL は base URL と DAVパスを結合するます。
+func (c *Client) resolveDAVURL(davPath string) (string, error) {
+	base, err := url.Parse(c.config.Nextcloud.ServerURL)
+	if err != nil {
+		return "", fmt.Errorf("ServerURL解析失敗: %w", err)
+	}
+
+	ref, err := url.Parse(davPath)
+	if err != nil {
+		return "", fmt.Errorf("DAVパス解析失敗: %w", err)
+	}
+
+	return base.ResolveReference(ref).String(), nil
+}
+
 // eventWithDate はイベントと日付情報を保持する内部構造体なのです。
 type eventWithDate struct {
 	event  models.Event
@@ -132,7 +218,7 @@ type eventWithDate struct {
 }
 
 // parseCalendarObject はiCalendarデータをパースしてイベントリストに変換するます。
-func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time) []eventWithDate {
+func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time, calendarName, calendarColor string) []eventWithDate {
 	events := []eventWithDate{}
 
 	if cal == nil {
@@ -178,10 +264,15 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time) []eve
 			}
 		}
 
-		// 色を取得（デフォルト: ブルー）
+		// 色を決定（優先順位: イベント色 > カレンダー色 > デフォルト）
 		colorValue := "#3788d8"
+		if normalized, ok := normalizeHexColor(calendarColor); ok {
+			colorValue = normalized
+		}
 		if color != nil && color.Value != "" {
-			colorValue = color.Value
+			if normalized, ok := normalizeHexColor(color.Value); ok {
+				colorValue = normalized
+			}
 		}
 
 		// Eventオブジェクトを作成
@@ -191,7 +282,7 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time) []eve
 			Start:    startTime.Format(time.RFC3339),
 			End:      endTime.Format(time.RFC3339),
 			Color:    colorValue,
-			Calendar: "Nextcloud",
+				Calendar: calendarName,
 			Desc:     "",
 		}
 		if description != nil {
@@ -206,6 +297,38 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time) []eve
 	}
 
 	return events
+}
+
+// normalizeHexColor は #RGB/#RRGGBB/#RRGGBBAA/先頭#なし の色を #RRGGBB に正規化するます。
+func normalizeHexColor(value string) (string, bool) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", false
+	}
+
+	trimmed = strings.TrimPrefix(trimmed, "#")
+
+	if len(trimmed) == 3 {
+		trimmed = strings.Repeat(string(trimmed[0]), 2) +
+			strings.Repeat(string(trimmed[1]), 2) +
+			strings.Repeat(string(trimmed[2]), 2)
+	}
+
+	if len(trimmed) == 8 {
+		trimmed = trimmed[:6]
+	}
+
+	if len(trimmed) != 6 {
+		return "", false
+	}
+
+	for _, ch := range trimmed {
+		if (ch < '0' || ch > '9') && (ch < 'a' || ch > 'f') && (ch < 'A' || ch > 'F') {
+			return "", false
+		}
+	}
+
+	return "#" + strings.ToUpper(trimmed), true
 }
 
 // parseDateTime はiCalendar日時文字列をパースするます。

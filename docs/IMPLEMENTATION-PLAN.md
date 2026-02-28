@@ -25,6 +25,7 @@
 - [x] 15.5. Nextcloud複数カレンダー・タスクリスト対応
 - [x] 16. OAuth削除・設定更新
 - [x] 17. Nextcloud統合テスト
+- [x] 18. Nextcloudカレンダー色取得対応
 
 ---
 
@@ -51,6 +52,7 @@
 | 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合、テスト追加、ビルド&テスト全PASS✓ |
 | 16. OAuth削除・設定更新 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | handlers.go/routes.goからOAuth削除、internal/services/google完全削除、handlers_test.go修正（nextcloud化）、config.go更新（レガシーコメント）、copilot-instructions.md更新（Nextcloud仕様）、ビルド成功✓ |
 | 17. Nextcloud統合テスト | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | 実環境接続テスト完了、API動作確認（/api/status, /api/calendar, /api/tasks）、キャッシュファイル生成確認、複数カレンダー・タスクリスト統合動作確認、エラーなし✓ |
+| 18. Nextcloudカレンダー色取得対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | PROPFINDでcalendar-color取得実装、色優先順位（イベント色>カレンダー色>デフォルト）反映、色正規化追加、テストPASS、APIで複数色確認✓ |
 
 ---
 
@@ -571,6 +573,25 @@
   - [x] UI 視認性・レイアウト確認（FHD、2m 視聴距離）（読みやすさ確認✓）
   - [x] docker 環境でのビルド・起動確認（docker-compose.yml 動作確認✓）
   - [x] すべてのテスト項目でOK、エラーなし、ビルド成功✓
+
+### 18. Nextcloudカレンダー色取得対応
+- 目的: Nextcloudのカレンダーごとの色を取得して、イベント表示色に正しく反映するます🥜
+- 完了条件: カレンダー単位の色がAPIレスポンスに反映され、UI上でカレンダーごとに色分け表示されるます
+- 実施内容:
+  - Nextcloud CalDAV/WebDAV でカレンダーコレクションの色プロパティ（calendar-color）取得を実装
+  - カレンダー名 → 色コード（#RRGGBB）のマップを構築し、イベント変換時に適用
+  - VEVENTのCOLORがある場合はイベント色を優先し、ない場合はカレンダー色を使用
+  - カラー値の正規化（#RGB→#RRGGBB、先頭#補完）と不正値フォールバックを追加
+  - 既存キャッシュ（nextcloud_calendar_events_all）の再取得条件を確認し、反映手順を明記
+  - ユニットテスト追加（色優先順位、フォーマット変換、フォールバック）
+  - ローカル実行で /api/calendar とフロント表示を確認
+- 進捗: 完了✨ （2026-02-28）
+  - [x] カレンダーコレクション色取得実装（PROPFIND / Depth:0）
+  - [x] イベント色適用ロジック（優先順位）実装
+  - [x] 色コード正規化・フォールバック実装（#RGB/#RRGGBB/#RRGGBBAA対応）
+  - [x] テスト追加・実行（go test ./internal/services/nextcloud/... PASS）
+  - [x] APIレスポンス確認（/api/calendar で複数カレンダー色を確認）
+  - [x] フロント表示反映条件を確認（Calendar.svelte は event.color を枠線に適用）
 
 ---
 
