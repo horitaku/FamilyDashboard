@@ -63,8 +63,6 @@ jobs:
           context: .
           push: false  # 本運用時は `true` に、Docker Registryの認証設定を追加
           tags: familydashboard:${{ github.ref_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       # アーティファクト（バイナリ）をアップロード
       - name: Upload artifact

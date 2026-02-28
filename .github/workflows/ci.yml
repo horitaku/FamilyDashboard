@@ -124,8 +124,6 @@ jobs:
           context: .
           push: false
           tags: familydashboard:ci-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # ╔══════════════════════════════════════╗
   # ║         結果サマリー                  ║
