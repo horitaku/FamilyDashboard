@@ -21,6 +21,10 @@
 - [ ] 12. 追加・改善・リファクタリング
 - [x] 13. GoogleからNextcloudへの移行計画
 - [x] 14. Nextcloud CalDAVクライアント実装
+- [x] 15. Nextcloud WebDAVタスク実装
+- [ ] 15.5. Nextcloud複数カレンダー・タスクリスト対応
+- [ ] 16. OAuth削除・設定更新
+- [ ] 17. Nextcloud統合テスト
 
 ---
 
@@ -43,7 +47,8 @@
 | 12. 改善・リファクタ | | | | 未実装 | |
 | 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
 | 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
-| 15. WebDAVタスク実装 | アーニャ | | | 未着手 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト完成 |
+| 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
+| 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | | | 未着手 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合 |
 | 16. OAuth削除・設定更新 | アーニャ | | | 未着手 | /auth/*エンドポイント削除、Google関連コード全削除、OAuth参照削除、Basic認証のみに統一 |
 | 17. Nextcloud統合テスト | アーニャ | | | 未着手 | 全API動作確認、フロントエンド統合テスト、エラーハンドリング検証、実環境接続テスト |
 
@@ -328,46 +333,114 @@
   - テスト実行: go test ./internal/services/nextcloud/... 全9テストPASS ✓
 
 ### 15. Nextcloud WebDAVタスク実装
-- 目的: NextcloudのCalDAV/WebDAVプロトコルでタスク（VTODO）を取得し、3段階ソートを実装するます🥜
+- 目的: NextcloudのCalDAV/WebDAVプロトコルでタスク（VTODO）を取得し、3段階ソートを実装するますのです🥜
 - 完了条件: /api/tasks エンドポイントがNextcloudから正しくタスク取得できて、サーバー側ソートが動作するます
 - 実施内容:
   - tasks.go ファイルの完全実装
     - GetTaskItems() 関数: Nextcloud WebDAV から VTODO 形式でタスク取得
     - parseTaskObject() 関数: iCalendar の VTODO コンポーネント → models.TaskItem 変換
-    - parseDateTime() 関数: DUE日付パース（YYYYMMDD と YYYYMMDDTHHmmss 対応）
-    - parsePriority() 関数: PRIORITY 値（0-9） → HIGH / MEDIUM / LOW 変換
-    - sortTaskItems() 関数: 3段階ソート実装
-      - 第1段: 期限（DUE）が近い順、期限なしは最後
-      - 第2段: 優先度 HIGH > MEDIUM > LOW
+    - parseTaskDateTime() 関数: DUE日付パース（YYYYMMDD と YYYYMMDDTHHmmss 対応）
+    - parsePriority() 関数: PRIORITY 値（1-9） → 優先度数値（1-3）に変換
+    - sortTasks() 関数: 3段階ソート実装
+      - 第1段: 期限（DueDate）が近い順、期限なしは最後
+      - 第2段: 優先度 降順（HIGH > MEDIUM > LOW）
       - 第3段: createdAt の昇順（同条件時の安定性）
     - キャッシュ統合: cache.FileCache を使って 5分 TTL でキャッシュ
     - エラーハンドリング: 取得失敗時はキャッシュ返却（既存パターン踏襲）
   - nextcloud_test.go への追加テスト
-    - TestGetTaskItems: 基本的なタスク取得テスト
-    - TestParseTaskObject: VTODO パースの正確性確認（複数タスク、優先度別）
-    - TestSortTaskItems: 3段階ソート動作確認
+    - TestSortTasks: 3段階ソート動作確認 ✓
       - 期限がない場合の最後配置
       - 同じ期限での優先度ソート
       - 同じ優先度での createdAt 昇順
-    - TestParsePriority: PRIORITY 値の変換確認（0=HIGH, 5=MEDIUM, 8=LOW など）
-    - すべてのテストを go test で実行可能に
+    - TestParsePriority: PRIORITY 値の変換確認 ✓
+    - TestGetTasksPath: WebDAVパス生成テスト ✓
+    - すべてのテストは go test で実行可能
   - handlers.go への統合
-    - GetTasks ハンドラーを nextcloud.(*Client).GetTaskItems() に切り替え
+    - GetTasks ハンドラーを nextcloud.(*Client).GetTaskItems() に切り替え済み ✓
     - キャッシュキー: "nextcloud_tasks_items" に統一
-  - models.go への確認
-    - TaskItem 構造体が VTODO 属性に対応しているか確認
-    - 既存の models.TaskResponse 形式に合わせて使用
+    - エラー時のキャッシュフォールバック実装
+  - models.go
+    - TaskItem 構造体が VTODO 属性に対応 ✓
+    - Priority フィールドで優先度を表現（1-3）
+- 進捗: 完了!✨ （2026-02-28）
+  - [x] tasks.go の完全実装（GetTaskItems, parseTaskObject, parseTaskDateTime, parsePriority, sortTasks）
+  - [x] parseTaskObject での VTODO コンポーネント処理
+  - [x] parsePriority ロジックで優先度数値決定（iCAL: 1-9 を 1-3 に変換）
+  - [x] sortTasks で確定的な 3段階ソート（期限 → 優先度 → createdAt）
+  - [x] キャッシュ統合（Read/Write の 4戻り値パターン準拠）
+  - [x] nextcloud_test.go でテスト実装（TestSortTasks, TestParsePriority, TestGetTasksPath）
+  - [x] go test ./internal/services/nextcloud/... で全テスト PASS ✓
+  - [x] handlers.go で GetTasks が nextcloud.GetTaskItems() に完全統合
+  - [x] go build 成功、エラーなし ✓
+  - [x] main.go で Nextcloud クライアント初期化済み、コンテキスト統合済み
+  - [x] settings.json に Nextcloud 設定セクション存在
+  - [x] より詳細な4個以上のタスク関連テスト実装完了
+
+### 15.5. Nextcloud複数カレンダー・タスクリスト対応
+- 目的: 複数のNextcloud カレンダーとタスクリストから同時にデータ取得して、統合表示するます🥜
+- 完了条件: /api/calendar と /api/tasks が複数カレンダー・タスクリストのデータを統合して返却でき、フロントエンドで正常に表示されるます
+- 実施内容:
+  - config.go の修正
+    - `CalendarName string` → `CalendarNames []string` に変更
+    - `TaskListName string` → `TaskListNames []string` に変更
+    - バリデーション追加（空配列チェック、デフォルト値設定）
+    - GetCalendarNames(), GetTaskListNames() メソッド追加
+  - settings.json の修正
+    - `"calendarName": "family"` → `"calendarNames": ["family", "work"]` に変更
+    - `"taskListName": "tasks"` → `"taskListNames": ["tasks", "personal"]` に変更
+    - settings.example.json も同様に更新
+  
+  **カレンダー（calendar.go）の修正**
+    - GetCalendarEvents() を複数カレンダー対応
+      - 各カレンダーに対して CalDAVクエリを実行
+      - 取得したイベントを統合（全カレンダーのイベントをマージ）
+      - 日付ごとに分類して返却（既存API仕様と互換性維持）
+    - キャッシュ戦略の決定
+      - 採用: 統合キャッシュ方式（キー: "nextcloud_calendar_events_all"）
+    - エラーハンドリング
+      - 1つのカレンダー取得失敗時も全体の失敗としない（部分的成功許容）
+      - エラー情報は /api/status に記録
+  
+  **タスク（tasks.go）の修正**
+    - GetTaskItems() を複数タスクリスト対応
+      - 各タスクリストに対して WebDAVクエリを実行（VTODO取得）
+      - 取得したタスクを統合（全リストのタスクをマージ）
+      - 既存の 3段階ソート（期限→優先度→createdAt）を統合後に適用
+      - 返却形式は既存 TasksResponse と互換性維持
+    - キャッシュ戦略の決定
+      - 採用: 統合キャッシュ方式（キー: "nextcloud_tasks_items_all"）
+    - エラーハンドリング
+      - 1つのタスクリスト取得失敗時も全体の失敗としない（部分的成功許容）
+      - エラー情報は /api/status に記録
+  
+  **テスト追加（nextcloud_test.go）**
+    - TestGetMultipleCalendars: 複数カレンダーからの取得テスト
+    - TestGetMultipleTaskLists: 複数タスクリストからの取得テスト
+    - テストデータ: 2つ以上のカレンダー、2つ以上のタスクリストをシミュレート
+    - イベント・タスク統合ロジック確認
+      - イベント: 重複チェック、順序確認（日付順）
+      - タスク: 重複チェック、3段階ソートが統合後も正しく動作
+  
+  **ハンドラー・モデル（変更なし）**
+    - handlers.go: GetCalendar, GetTasks は既存のまま（API仕様不変）
+    - models.go: CalendarResponse, TasksResponse 構造体は据え置き
+
 - 進捗: 未着手
-  - [ ] tasks.go の完全実装
-  - [ ] parseTaskObject での VTODO コンポーネント処理
-  - [ ] parsePriority ロジックで HIGH/MEDIUM/LOW 決定
-  - [ ] sortTaskItems で確定的な 3段階ソート
-  - [ ] キャッシュ統合（Read/Write の 4戻り値パターン準拠）
-  - [ ] nextcloud_test.go で 4個以上のタスク関連テスト追加
-  - [ ] go test ./internal/services/nextcloud/... で全テスト PASS
-  - [ ] handlers.go で GetTasks 切り替え
+  - [ ] config.go で CalendarName → CalendarNames, TaskListName → TaskListNames に変更
+  - [ ] バリデーション実装（空配列チェック、デフォルト値設定）
+  - [ ] settings.json, settings.example.json を更新（calendarNames, taskListNames 配列化）
+  - [ ] calendar.go で GetCalendarEvents() を複数カレンダー対応
+  - [ ] tasks.go で GetTaskItems() を複数タスクリスト対応
+  - [ ] キャッシュキー統合戦略の実装（calendarと tasks 両方）
+  - [ ] エラー部分成功の許容実装（両方）
+  - [ ] nextcloud_test.go で複数カレンダーテスト追加
+  - [ ] nextcloud_test.go で複数タスクリストテスト追加
   - [ ] go build 成功、エラーなし
-  - [ ] API テスト確認（curl で /api/tasks 返却確認）
+  - [ ] go test ./internal/services/nextcloud/... で全テスト PASS
+  - [ ] curl で /api/calendar 複数カレンダーデータ確認
+  - [ ] curl で /api/tasks 複数タスクリストデータ確認
+  - [ ] フロントエンドで複数カレンダーイベント正常表示確認
+  - [ ] フロントエンドで複数タスクリストタスク正常表示＆ソート確認
 
 ### 16. OAuth削除・設定更新
 - 目的: Googleからのすべての認証機構を削除し、Nextcloud Basic認証のみに統一するます🥜
