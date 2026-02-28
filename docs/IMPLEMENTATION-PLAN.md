@@ -19,6 +19,13 @@
 - [x] 10. エラーUI・点滅インジケーター
 - [x] 11. 本番用ビルド・デプロイ
 - [ ] 12. 追加・改善・リファクタリング
+  - [x] 12.1. GitHub Actions CI パイプライン
+  - [ ] 12.2. golangci-lint 導入
+  - [ ] 12.3. Svelte コンポーネントテスト
+  - [ ] 12.4. E2E テスト
+  - [ ] 12.5. API ドキュメント化（Swagger/OpenAPI）
+  - [ ] 12.6. ロギング強化（構造化ログ）
+  - [ ] 12.7. ヘルスチェック API 改善
 - [x] 13. GoogleからNextcloudへの移行計画
 - [x] 14. Nextcloud CalDAVクライアント実装
 - [x] 15. Nextcloud WebDAVタスク実装
@@ -45,7 +52,14 @@
 | 9. フロント実装 | アーニャ | 2026-02-15 | 2026-02-15 | 完了 | API クライアント実装、Header/Calendar/Weather/Tasks コンポーネント実装、App.svelte レイアウト実装、スタイル設定、ビルド＆UI確認完了✓ |
 | 10. エラーUI | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | 点滅インジケーター/接続エラー表示を実装 |
 | 11. ビルド・デプロイ | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | Svelte静的ビルド作成、Gin静的ファイル配信設定、Dockerfile/docker-compose.yml作成、DEPLOY.md作成、ビルド＆動作確認完了✓ |
-| 12. 改善・リファクタ | | | | 未実装 | |
+| 12. 改善・リファクタ | | | | 未実装 | 品質向上・自動化・ドキュメント整備 |
+| 12.1. GitHub Actions CI | アーニャ | 2026-03-01 | 2026-03-01 | 完了 | ci.yml（Go/Svelte自動テスト）、build-release.yml（リリースビルド）、.github/README.md作成、CI実行確認✓ |
+| 12.2. golangci-lint 導入 | | | | 未実装 | 静的解析導入、CI内で自動チェック |
+| 12.3. Svelte テスト | | | | 未実装 | コンポーネントユニットテスト実装（Vitest） |
+| 12.4. E2E テスト | | | | 未実装 | Playwright でバックエンド統合テスト自動化 |
+| 12.5. API ドキュメント | | | | 未実装 | Swagger/OpenAPI仕様書作成、UI生成 |
+| 12.6. ロギング強化 | | | | 未実装 | 構造化ログ導入（JSON形式）、ファイル出力 |
+| 12.7. ヘルスチェック改善 | | | | 未実装 | キオスク監視、詳細な状態情報反映 |
 | 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
 | 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
 | 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
@@ -287,14 +301,239 @@
   - 動作確認: localhost:8080 でダッシュボード表示確認、静的アセット配信確認✓ 
 
 ### 12. 追加・改善・リファクタリング
-- 目的: 仕様追加・リファクタ・テスト追加・フィードバック対応
-- 完了条件: 改善内容が反映されるます
+- 目的: コード品質向上・自動化・ドキュメント整備で、長期運用を堅牢にするます🥜
+- 完了条件: 全改善サブタスク（12.1〜12.7）が実装され、CI/テスト/ロギングが正常に動作するます
 - 実施内容:
-  - プロバイダ設定や色マッピングなど仕様追加
-  - コードのリファクタリング・テスト追加
-  - ユーザーからのフィードバックで改善
-  - CI導入や自動テスト追加
-- 進捗: 
+  - CI パイプライン構築（GitHub Actions）
+  - 静的解析導入（golangci-lint）
+  - テスト自動化（ユニット・コンポーネント・E2E）
+  - API ドキュメント化（Swagger）
+  - ロギング強化（構造化ログ）
+  - ヘルスチェック API 改善
+  - 各改善の検証・統合テスト
+- 進捗: 未実装
+
+### 12.1. GitHub Actions CI パイプライン
+- 目的: コード push 時に自動でテスト・ビルド・品質チェックを実行するます
+- 完了条件: push すると GitHub Actions が自動実行され、ビルド失敗やテスト失敗で PR が mark されるます
+- 実施内容:
+  - `.github/workflows/ci.yml` ファイル作成
+  - CI パイプラインの構成:
+    1. **Go テスト実行**: `go test -v -race -coverprofile=coverage.out ./...` → 全ユニットテスト実行
+    2. **Go ビルド確認**: `go build -o ./bin/familydashboard ./cmd/server` → ビルドエラー検出
+    3. **Svelte ビルド**: `npm run build` → フロントエンド静的ビルド検証
+    4. **Docker ビルド確認**: `docker build` → イメージビルド検証
+    5. **CI サマリー**: 全ジョブの結果を集約
+  - トリガー: push to main/develop, PR作成時
+  - 並列実行: Go / Svelte / Docker の3ジョブを同時実行
+  - キャッシュ: Go modules, npm 依存関係をキャッシュ（高速化）
+  - テストカバレッジ: Codecov へアップロード（オプション）
+  - リリースビルド: タグ作成時に自動ビルド・リリース（`build-release.yml`）
+  - ファイル一覧:
+    - `.github/workflows/ci.yml` (継続的インテグレーション)
+    - `.github/workflows/build-release.yml` (リリースビルド)
+    - `.github/README.md` (ワークフロー説明書)
+  - 検証: GitHub の Actions タブで実行状況確認
+- 進捗: 完了✨ （2026-03-01）
+  - [x] `.github/workflows/ci.yml` 作成（Go/Svelte/Docker テスト）
+  - [x] `.github/workflows/build-release.yml` 作成（タグ push でリリース自動化）
+  - [x] `.github/README.md` 作成（ワークフロー説明・セットアップ手順）
+  - [x] すべてのワークフロー実装完了、ローカル検証確認✓
+
+### 12.2. golangci-lint 導入
+- 目的: Go コードの静的解析を自動化し、バグ・スタイル問題を早期発見するます
+- 完了条件: golangci-lint が組み込まれた CI が動作し、lint エラーがあると CI で失敗するます
+- 実施内容:
+  - `.golangci.yml` 設定ファイル作成
+  - 有効化する linter 選定（推奨セット）:
+    - `gofmt`: フォーマット確認
+    - `goimports`: インポート整理
+    - `vet`: Go の標準解析
+    - `errcheck`: エラーハンドリング漏れ検出
+    - `ineffassign`: 不要な代入検出
+    - `staticcheck`: 静的解析
+    - `govet`: 詳細な構造体チェック
+  - CI で golangci-lint 実行:
+    - `golangci-lint run ./internal ./cmd --timeout=5m`
+    - 1つでもエラーがあれば CI 失敗
+  - ローカル開発時の実行スクリプト: `make lint`
+  - ファイル: `.golangci.yml` 新規作成、Makefile に lint ターゲット追加
+  - 検証: `golangci-lint run ./...` で local テスト
+- 進捗: 未実装
+
+### 12.3. Svelte コンポーネントテスト
+- 目的: フロントエンドのコンポーネント（Header/Calendar/Weather/Tasks）の動作を自動テストするます
+- 完了条件: Vitest でコンポーネントテストが実装でき、CI内で自動実行されるます
+- 実施内容:
+  - テストフレームワーク導入: `vitest` + `@testing-library/svelte`
+    - `npm install -D vitest @testing-library/svelte @testing-library/dom`
+  - テストファイル作成: `frontend/src/lib/components/__tests__/` 配下
+    - `Header.test.js`: 時刻表示、日付フォーマット、エラーインジケーター点滅
+    - `Calendar.test.js`: イベント表示、日付ソート、色マッピング
+    - `Weather.test.js`: 気温表示、降水確率ボタン、アラート表示
+    - `Tasks.test.js`: タスク表示、ソート順序、優先度色分け
+  - テスト内容（各コンポーネント）:
+    - Props 受け取りのテスト（データ型・デフォルト値）
+    - 条件分岐の表示確認（イベント有無、エラー有無など）
+    - イベントハンドリング（クリック、フォーム入力）
+    - スクリーンショットテスト（ビジュアルリグレッション）
+  - CI 統合: `.github/workflows/ci.yml` に以下を追加
+    - `npm run test` → すべてのコンポーネントテスト実行
+    - テスト失敗で CI 失敗
+  - ローカル実行: `npm run test`, `npm run test -- --watch`
+  - ファイル: `frontend/src/lib/components/__tests__/*.test.js`
+  - 目標カバレッジ: コンポーネント部分で 70% 以上
+- 進捗: 未実装
+
+### 12.4. E2E テスト
+- 目的: バックエンド API ↔ フロントエンドの統合動作を自動テストするます
+- 完了条件: Playwright でバックエンド起動→API呼出→UI表示までの一連の流れが自動テストできるます
+- 実施内容:
+  - テストフレームワーク導入: `playwright`
+    - `npm install -D @playwright/test`
+  - テストシナリオ作成: `frontend/e2e/` 配下
+    - `api-integration.spec.js`: バックエンド API の動作確認
+      - `/api/status` → ok フィールド確認
+      - `/api/calendar` → イベント返却確認
+      - `/api/tasks` → ソート順序確認
+      - `/api/weather` → 天気データ確認
+    - `ui-display.spec.js`: UI表示確認
+      - ページロード → 時刻表示
+      - カレンダーウィジェット → イベント表示
+      - タスクウィジェット → タスク一覧表示
+      - 天気ウィジェット → 気温・降水確率表示
+    - `error-handling.spec.js`: エラーハンドリング
+      - バックエンド停止 → エラーインジケーター点灯
+      - 無効なデータ → フォールバック表示
+  - CI 統合: `.github/workflows/ci.yml` に以下を追加
+    - バックエンド起動: `go run ./cmd/server` (background)
+    - フロントエンドビルド: `npm run build`
+    - E2E テスト実行: `npx playwright test`
+    - テスト失敗で CI 失敗
+  - テスト実行時のタイムアウト設定（API遅延対応）
+  - ローカル実行: `npx playwright test`, `npx playwright test --ui`
+  - ファイル: `frontend/e2e/*.spec.js`, `playwright.config.js`
+- 進捗: 未実装
+
+### 12.5. API ドキュメント化（Swagger/OpenAPI）
+- 目的: バックエンド API 仕様を Swagger UI で可視化し、開発効率・保守性を向上させるます
+- 完了条件: `/docs` エンドポイントで Swagger UI にアクセスでき、すべての API エンドポイントがドキュメント化されるます
+- 実施内容:
+  - Go ライブラリ導入: `swaggo/swag`
+    - `go get -u github.com/swaggo/swag/cmd/swag`
+    - `go get -u github.com/swaggo/gin-swagger`
+  - API コメント作成（各ハンドラー関数に Swagger コメントを記述）:
+    ```go
+    // GetStatus GET /api/status
+    // @Summary Get current status
+    // @Description Returns ok, errors, and lastUpdated
+    // @Tags status
+    // @Produce json
+    // @Success 200 {object} StatusResponse
+    // @Router /api/status [get]
+    func (h *Handlers) GetStatus(c *gin.Context) { ... }
+    ```
+  - swag 自動生成: `swag init -g ./cmd/server/main.go`
+    - `docs/` ディレクトリに Swagger JSON/YAML 自動生成
+  - Gin ルートに Swagger UI 登録:
+    ```go
+    import "github.com/swaggo/gin-swagger"
+    router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    ```
+  - ドキュメント内容:
+    - `/api/status`: ステータス取得
+    - `/api/calendar`: カレンダーイベント取得
+    - `/api/tasks`: タスク一覧取得
+    - `/api/weather`: 天気情報取得
+  - ビルド: `swag init` → docs/ に生成
+  - 確認: `http://localhost:8080/docs/` で Swagger UI 表示
+  - ファイル: コメント追加（各ハンドラー）、`docs/` 自動生成
+- 進捗: 未実装
+
+### 12.6. ロギング強化（構造化ログ）
+- 目的: バックエンドに詳細なログを記録し、本番環境でのトラブルシューティングを効率化するます
+- 完了条件: 構造化ログ（JSON 形式）が出力され、エラー・アラートがログファイルに記録されるます
+- 実施内容:
+  - Go ロギングライブラリ導入: `zap` (Uber の構造化ログライブラリ)
+    - `go get -u go.uber.org/zap`
+  - Logger パッケージ作成: `internal/logger/logger.go`
+    - 環境（dev/production）による設定切り替え
+    - dev: コンソール出力、見やすいフォーマット
+    - production: JSON 形式、ファイル出力（ローテーション）
+  - ログレベル設定:
+    - DEBUG: 詳細デバッグ情報
+    - INFO: 一般情報（API呼出、キャッシュヒット）
+    - WARN: 警告（古いキャッシュ、リトライ）
+    - ERROR: エラー（API失敗、ネットワークエラー）
+  - ログ出力ポイント:
+    - API 呼出（method, path, duration）
+    - キャッシュ動作（hit/miss, TTL）
+    - 外部 API 通信（成功/失敗、レスポンス時間）
+    - エラーリカバリー（fallback キャッシュ使用）
+  - ファイル出力設定:
+    - `data/logs/` ディレクトリ作成
+    - ファイル: `familydashboard.log` (JSON 形式)
+    - ローテーション: サイズ 10MB またはファイル数 5 個まで
+  - main.go で logger 初期化
+  - 全ハンドラー・サービスで logger 使用
+  - ファイル: `internal/logger/logger.go` 新規作成、各パッケージで logger.Log() 使用
+- 進捗: 未実装
+
+### 12.7. ヘルスチェック API 改善
+- 目的: キオスク表示デバイス（Pi Zero 2 W）がバックエンド正常性を監視でき、詳細な状態を取得できるようにするます
+- 完了条件: GET /health エンドポイントが詳細な状態情報を返し、UI で監視・表示できるます
+- 実施内容:
+  - `/health` エンドポイント作成（既存の `/api/status` とは別）
+    - 軽量・高速レスポンス（UI 監視用）
+    - ステータス: "healthy", "degraded", "unhealthy"
+  - レスポンス形式:
+    ```json
+    {
+      "status": "healthy",
+      "timestamp": "2026-03-01T12:00:00Z",
+      "uptime": 3600.5,
+      "checks": {
+        "nextcloud": {
+          "status": "ok",
+          "lastCheck": "2026-03-01T12:00:00Z",
+          "latency": 245
+        },
+        "weather": {
+          "status": "ok",
+          "lastCheck": "2026-03-01T11:55:00Z",
+          "latency": 1250
+        },
+        "cache": {
+          "status": "ok",
+          "files": 3,
+          "totalSize": 2048
+        }
+      }
+    }
+    ```
+  - 詳細チェック項目:
+    - Nextcloud 接続テスト（タイムアウト時は degraded）
+    - 天気 API 接続テスト
+    - キャッシュファイル存在確認
+    - メモリ使用率（Raspberry Pi リソース監視）
+  - フロントエンド対応:
+    - Header コンポーネントで `/health` を定期監視（60秒ごと）
+    - status が "unhealthy" なら画面全体にアラート表示
+    - 詳細情報表示オプション（モーダルウィンドウ）
+  - CI での health check テスト
+  - ファイル: `internal/handlers/health.go` 新規作成、routes に登録
+- 進捗: 未実装
+
+---
+
+## 12の統合テスト・検証計画
+- 全サブタスク（12.1〜12.7）完了後、以下を実施:
+  1. CI の全パイプラインが正常に動作するか確認
+  2. E2E テストが全シナリオで PASS するか確認
+  3. Swagger UI ですべての API が表示されるか確認
+  4. ログファイルが正しく出力されているか確認
+  5. ヘルスチェック API がすべてのステータスを返すか確認
+  6. Raspberry Pi 環境（docker）で全機能が動作するか確認 
 
 ### 13. GoogleからNextcloudへの移行計画
 - 目的: GoogleカレンダーとTasksをNextcloudのCalDAV/WebDAVに完全移行するます🥜
