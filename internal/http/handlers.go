@@ -46,8 +46,8 @@ func GetStatus(ctx *gin.Context) {
 		}
 
 		lastUpdated.Weather = readFetchedAt(fc, fmt.Sprintf("weather:%s:%s", country, cityName))
-		lastUpdated.Calendar = readFetchedAt(fc, "nextcloud_calendar_events")
-		lastUpdated.Tasks = readFetchedAt(fc, "nextcloud_tasks_items")
+		lastUpdated.Calendar = readFetchedAt(fc, "nextcloud_calendar_events_all")
+		lastUpdated.Tasks = readFetchedAt(fc, "nextcloud_tasks_items_all")
 	}
 
 	response := models.StatusResponse{

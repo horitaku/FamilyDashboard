@@ -104,7 +104,7 @@ func seedCache(t *testing.T, fc *cache.FileCache, cfg *config.Config) {
 			},
 		},
 	}
-	if _, err := fc.Write("nextcloud_calendar_events", calendarPayload, map[string]string{"source": "test"}); err != nil {
+	if _, err := fc.Write("nextcloud_calendar_events_all", calendarPayload, map[string]string{"source": "test"}); err != nil {
 		t.Fatalf("seed calendar cache: %v", err)
 	}
 
@@ -121,7 +121,7 @@ func seedCache(t *testing.T, fc *cache.FileCache, cfg *config.Config) {
 			},
 		},
 	}
-	if _, err := fc.Write("nextcloud_tasks_items", tasksPayload, map[string]string{"source": "test"}); err != nil {
+	if _, err := fc.Write("nextcloud_tasks_items_all", tasksPayload, map[string]string{"source": "test"}); err != nil {
 		t.Fatalf("seed tasks cache: %v", err)
 	}
 }
