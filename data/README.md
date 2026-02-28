@@ -6,7 +6,7 @@
 
 ### settings.json (秘密情報を含む - gitには含めない)
 
-アプリケーション設定ファイル。ClientSecret などの秘密情報を含むため、**git で版管理されません**。
+アプリケーション設定ファイル。Nextcloud のパスワードなどの秘密情報を含むため、**git で版管理されません**。
 
 **セットアップ方法:**
 
@@ -16,11 +16,14 @@
    ```
 
 2. `settings.json` を編集して、以下の情報を入力するのです:
-   - `google.clientId`: Google OAuth 2.0 Client ID
-   - `google.clientSecret`: Google OAuth 2.0 Client Secret
-   - `google.redirectUri`: OAuth リダイレクトURI（ローカル開発は `http://localhost:8080/auth/callback`）
-   - `google.calendarId`: Google Calendar の共有カレンダーID
-   - `google.taskListId`: Google Tasks のタスクリストID（`@default` でも動作）
+   - `nextcloud.serverUrl`: Nextcloud サーバーの URL（例: `https://nextcloud.example.com`）
+   - `nextcloud.username`: Nextcloud のユーザー名
+   - `nextcloud.password`: Nextcloud のアプリパスワード（または メインパスワード）
+   - `nextcloud.calendarNames`: カレンダー名の配列（例: `["family", "work"]`）
+   - `nextcloud.taskListNames`: タスクリスト名の配列（例: `["tasks", "shopping"]`）
+   - `location.cityName`: 天気情報を取得する都市名（例: `"姫路市"`）
+
+詳細な設定方法は [docs/NEXTCLOUD_SETUP.md](../docs/NEXTCLOUD_SETUP.md) を参照してください。
 
 ### settings.example.json (テンプレート - gitに含まれる)
 
@@ -30,13 +33,13 @@
 
 ### cache/ (実行時生成キャッシュ)
 
-天気 API、Google Calendar、Google Tasks のキャッシュが保存されるのです。
+天気 API、Nextcloud カレンダー、Nextcloud タスクのキャッシュが保存されるのです。
 自動で生成されるため、git には含まれません。
 
-### tokens.json (将来: トークン永続化用)
-
-Google OAuth トークンをファイルに保存する場合に使用（実装予定）。
-秘密情報なので、git には含まれません。
+キャッシュファイルの例:
+- `weather:JP:姫路市.json`: 天気データのキャッシュ
+- `nextcloud_calendar_events.json`: カレンダーイベントのキャッシュ
+- `nextcloud_tasks_items.json`: タスクリストのキャッシュ
 
 ---
 
@@ -46,11 +49,11 @@ Google OAuth トークンをファイルに保存する場合に使用（実装�
 
 - `.gitignore` に `data/settings.json` が含まれていることを確認
 - リポジトリを公開する前に、秘密情報が含まれていないか確認
-- ClientSecret を誤ってコミットした場合は、**無効化して新しい認証情報を生成**するのです！
+- アプリパスワードを誤ってコミットした場合は、**無効化して新しいパスワードを生成**するのです！
 
 ---
 
-## 📝 Google API 設定手順
+## 📝 Nextcloud 設定手順
 
-Google OAuth 2.0 の ClientID/ClientSecret を取得する手順は、
-リポジトリの [docs/GOOGLE_SETUP.md](../docs/GOOGLE_SETUP.md) を参照するますね。
+Nextcloud CalDAV/WebDAV のアプリパスワードやカレンダー名、タスクリスト名を取得する手順は、
+リポジトリの [docs/NEXTCLOUD_SETUP.md](../docs/NEXTCLOUD_SETUP.md) を参照するますね。

@@ -52,7 +52,7 @@
         </div>
       </div>
       <div class="calendar-upcoming">
-        <Calendar daysToShow={5} skipDays={2} title="こんごのよてい" />
+        <Calendar daysToShow={5} skipDays={2} title="こんごのよてい" showDate={true} />
       </div>
     </div>
     <div class="right-column">

@@ -51,8 +51,8 @@ ENV TZ=Asia/Tokyo
 # ビルド済みバイナリをコピー
 COPY --from=backend-builder /app/server ./server
 
-# フロントエンドのビルド成果物をコピー
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# フロントエンドのビルド成果物をコピー（vite.config.js で outDir: 'build' に指定）
+COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
 # data ディレクトリを作成（ボリュームマウントで永続化）
 RUN mkdir -p /app/data/cache

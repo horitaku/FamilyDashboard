@@ -1,0 +1,96 @@
+name: Build & Release
+
+# リリース時のトリガー（タグ作成時）
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ╔══════════════════════════════════════╗
+  # ║  CI パイプラン確認＆ビルド          ║
+  # ╚══════════════════════════════════════╝
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      # コードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # タグ情報を取得
+
+      # Go環境をセットアップ
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      # Node.js環境をセットアップ（最新LTS推奨、Vite要件）
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      # Go テスト実行
+      - name: Run Go tests
+        run: go test -v -race ./...
+
+      # npm依存関係をインストール
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./frontend
+
+      # フロントエンドビルド
+      - name: Build Svelte project
+        run: npm run build
+        working-directory: ./frontend
+
+      # Go バイナリのビルド
+      - name: Build Go binary
+        run: go build -o ./bin/familydashboard ./cmd/server
+
+      # Docker イメージをビルド＆プッシュ（レジストリがあれば）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false  # 本運用時は `true` に、Docker Registryの認証設定を追加
+          tags: familydashboard:${{ github.ref_name }}
+
+      # アーティファクト（バイナリ）をアップロード
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: familydashboard-binary
+          path: ./bin/familydashboard
+          retention-days: 30
+
+      # リリースノートを作成（オプション）
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            # Release ${{ github.ref_name }}
+
+            Build artifacts are available in the attached zip files.
+
+            ## Changes in this Release
+            - Go backend binary
+            - Svelte frontend static build
+            - Docker image build verified
+
+            See the commit history for detailed changes.
+          draft: false
+          prerelease: false
+        continue-on-error: true

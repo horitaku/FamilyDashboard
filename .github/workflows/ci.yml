@@ -1,0 +1,158 @@
+name: CI Pipeline
+
+# トリガー設定
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ╔══════════════════════════════════════╗
+  # ║  バックエンド（Go）テスト・ビルド    ║
+  # ╚══════════════════════════════════════╝
+  backend:
+    name: Go Backend Tests & Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      # コードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Go環境をセットアップ（1.21以上推奨）
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      # Go依存関係をキャッシュ（通常 go.mod/go.sum に基づく）
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # Go ユニットテスト実行
+      - name: Run Go tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+        working-directory: ./
+
+      # テストカバレッジをレポート（オプション）
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          flags: go
+          name: go-coverage
+        continue-on-error: true
+
+      # Go ビルド確認（バイナリ生成テスト）
+      - name: Build Go binary
+        run: go build -o ./bin/familydashboard ./cmd/server
+        working-directory: ./
+
+      # ビルド成功を確認
+      - name: Verify binary
+        run: ls -lh ./bin/familydashboard
+
+  # ╔══════════════════════════════════════╗
+  # ║   フロントエンド（Svelte）ビルド    ║
+  # ╚══════════════════════════════════════╝
+  frontend:
+    name: Svelte Frontend Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      # コードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Node.js環境をセットアップ（最新LTS推奨、Vite要件）
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      # npm依存関係をインストール
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./frontend
+
+      # フロントエンド static ビルド生成
+      - name: Build Svelte project
+        run: npm run build
+        working-directory: ./frontend
+
+      # ビルドアーティファクト確認
+      - name: Verify build output
+        run: |
+          if [ -d "./frontend/build" ]; then
+            echo "✓ Frontend build directory exists"
+            ls -la ./frontend/build | head -20
+          else
+            echo "✗ Frontend build directory not found!"
+            exit 1
+          fi
+
+  # ╔══════════════════════════════════════╗
+  # ║     Docker イメージ ビルド確認       ║
+  # ╚══════════════════════════════════════╝
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    
+    steps:
+      # コードをチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Docker イメージをビルド（プッシュしない）
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: familydashboard:ci-test
+
+  # ╔══════════════════════════════════════╗
+  # ║         結果サマリー                  ║
+  # ╚══════════════════════════════════════╝
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker-build]
+    if: always()  # 前のステップが失敗してもサマリーは実行
+    
+    steps:
+      - name: Check CI results
+        run: |
+          echo "╔═══════════════════════════════════════╗"
+          echo "║      CI Pipeline Results Summary      ║"
+          echo "╚═══════════════════════════════════════╝"
+          echo ""
+          echo "Backend Tests:    ${{ needs.backend.result }}"
+          echo "Frontend Build:   ${{ needs.frontend.result }}"
+          echo "Docker Build:     ${{ needs.docker-build.result }}"
+          echo ""
+          
+          # すべてが成功したかチェック
+          if [[ "${{ needs.backend.result }}" == "success" && \
+                "${{ needs.frontend.result }}" == "success" && \
+                "${{ needs.docker-build.result }}" == "success" ]]; then
+            echo "✓ All CI checks passed! 🎉"
+            exit 0
+          else
+            echo "✗ Some CI checks failed. Please review logs above."
+            exit 1
+          fi

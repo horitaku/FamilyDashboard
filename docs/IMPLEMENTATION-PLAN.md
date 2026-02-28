@@ -19,6 +19,20 @@
 - [x] 10. エラーUI・点滅インジケーター
 - [x] 11. 本番用ビルド・デプロイ
 - [ ] 12. 追加・改善・リファクタリング
+  - [x] 12.1. GitHub Actions CI パイプライン
+  - [ ] 12.2. golangci-lint 導入
+  - [ ] 12.3. Svelte コンポーネントテスト
+  - [ ] 12.4. E2E テスト
+  - [ ] 12.5. API ドキュメント化（Swagger/OpenAPI）
+  - [ ] 12.6. ロギング強化（構造化ログ）
+  - [ ] 12.7. ヘルスチェック API 改善
+- [x] 13. GoogleからNextcloudへの移行計画
+- [x] 14. Nextcloud CalDAVクライアント実装
+- [x] 15. Nextcloud WebDAVタスク実装
+- [x] 15.5. Nextcloud複数カレンダー・タスクリスト対応
+- [x] 16. OAuth削除・設定更新
+- [x] 17. Nextcloud統合テスト
+- [x] 18. Nextcloudカレンダー色取得対応
 
 ---
 
@@ -38,7 +52,21 @@
 | 9. フロント実装 | アーニャ | 2026-02-15 | 2026-02-15 | 完了 | API クライアント実装、Header/Calendar/Weather/Tasks コンポーネント実装、App.svelte レイアウト実装、スタイル設定、ビルド＆UI確認完了✓ |
 | 10. エラーUI | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | 点滅インジケーター/接続エラー表示を実装 |
 | 11. ビルド・デプロイ | アーニャ | 2026-02-23 | 2026-02-23 | 完了 | Svelte静的ビルド作成、Gin静的ファイル配信設定、Dockerfile/docker-compose.yml作成、DEPLOY.md作成、ビルド＆動作確認完了✓ |
-| 12. 改善・リファクタ | | | | 未実装 | |
+| 12. 改善・リファクタ | | | | 未実装 | 品質向上・自動化・ドキュメント整備 |
+| 12.1. GitHub Actions CI | アーニャ | 2026-03-01 | 2026-03-01 | 完了 | ci.yml（Go/Svelte自動テスト）、build-release.yml（リリースビルド）、.github/README.md作成、CI実行確認✓ |
+| 12.2. golangci-lint 導入 | | | | 未実装 | 静的解析導入、CI内で自動チェック |
+| 12.3. Svelte テスト | | | | 未実装 | コンポーネントユニットテスト実装（Vitest） |
+| 12.4. E2E テスト | | | | 未実装 | Playwright でバックエンド統合テスト自動化 |
+| 12.5. API ドキュメント | | | | 未実装 | Swagger/OpenAPI仕様書作成、UI生成 |
+| 12.6. ロギング強化 | | | | 未実装 | 構造化ログ導入（JSON形式）、ファイル出力 |
+| 12.7. ヘルスチェック改善 | | | | 未実装 | キオスク監視、詳細な状態情報反映 |
+| 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
+| 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
+| 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
+| 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合、テスト追加、ビルド&テスト全PASS✓ |
+| 16. OAuth削除・設定更新 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | handlers.go/routes.goからOAuth削除、internal/services/google完全削除、handlers_test.go修正（nextcloud化）、config.go更新（レガシーコメント）、copilot-instructions.md更新（Nextcloud仕様）、ビルド成功✓ |
+| 17. Nextcloud統合テスト | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | 実環境接続テスト完了、API動作確認（/api/status, /api/calendar, /api/tasks）、キャッシュファイル生成確認、複数カレンダー・タスクリスト統合動作確認、エラーなし✓ |
+| 18. Nextcloudカレンダー色取得対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | PROPFINDでcalendar-color取得実装、色優先順位（イベント色>カレンダー色>デフォルト）反映、色正規化追加、テストPASS、APIで複数色確認✓ |
 
 ---
 
@@ -273,14 +301,536 @@
   - 動作確認: localhost:8080 でダッシュボード表示確認、静的アセット配信確認✓ 
 
 ### 12. 追加・改善・リファクタリング
-- 目的: 仕様追加・リファクタ・テスト追加・フィードバック対応
-- 完了条件: 改善内容が反映されるます
+- 目的: コード品質向上・自動化・ドキュメント整備で、長期運用を堅牢にするます🥜
+- 完了条件: 全改善サブタスク（12.1〜12.7）が実装され、CI/テスト/ロギングが正常に動作するます
 - 実施内容:
-  - プロバイダ設定や色マッピングなど仕様追加
-  - コードのリファクタリング・テスト追加
-  - ユーザーからのフィードバックで改善
-  - CI導入や自動テスト追加
-- 進捗: 
+  - CI パイプライン構築（GitHub Actions）
+  - 静的解析導入（golangci-lint）
+  - テスト自動化（ユニット・コンポーネント・E2E）
+  - API ドキュメント化（Swagger）
+  - ロギング強化（構造化ログ）
+  - ヘルスチェック API 改善
+  - 各改善の検証・統合テスト
+- 進捗: 未実装
+
+### 12.1. GitHub Actions CI パイプライン
+- 目的: コード push 時に自動でテスト・ビルド・品質チェックを実行するます
+- 完了条件: push すると GitHub Actions が自動実行され、ビルド失敗やテスト失敗で PR が mark されるます
+- 実施内容:
+  - `.github/workflows/ci.yml` ファイル作成
+  - CI パイプラインの構成:
+    1. **Go テスト実行**: `go test -v -race -coverprofile=coverage.out ./...` → 全ユニットテスト実行
+    2. **Go ビルド確認**: `go build -o ./bin/familydashboard ./cmd/server` → ビルドエラー検出
+    3. **Svelte ビルド**: `npm run build` → フロントエンド静的ビルド検証
+    4. **Docker ビルド確認**: `docker build` → イメージビルド検証
+    5. **CI サマリー**: 全ジョブの結果を集約
+  - トリガー: push to main/develop, PR作成時
+  - 並列実行: Go / Svelte / Docker の3ジョブを同時実行
+  - キャッシュ: Go modules, npm 依存関係をキャッシュ（高速化）
+  - テストカバレッジ: Codecov へアップロード（オプション）
+  - リリースビルド: タグ作成時に自動ビルド・リリース（`build-release.yml`）
+  - ファイル一覧:
+    - `.github/workflows/ci.yml` (継続的インテグレーション)
+    - `.github/workflows/build-release.yml` (リリースビルド)
+    - `.github/README.md` (ワークフロー説明書)
+  - 検証: GitHub の Actions タブで実行状況確認
+- 進捗: 完了✨ （2026-03-01）
+  - [x] `.github/workflows/ci.yml` 作成（Go/Svelte/Docker テスト）
+  - [x] `.github/workflows/build-release.yml` 作成（タグ push でリリース自動化）
+  - [x] `.github/README.md` 作成（ワークフロー説明・セットアップ手順）
+  - [x] すべてのワークフロー実装完了、ローカル検証確認✓
+
+### 12.2. golangci-lint 導入
+- 目的: Go コードの静的解析を自動化し、バグ・スタイル問題を早期発見するます
+- 完了条件: golangci-lint が組み込まれた CI が動作し、lint エラーがあると CI で失敗するます
+- 実施内容:
+  - `.golangci.yml` 設定ファイル作成
+  - 有効化する linter 選定（推奨セット）:
+    - `gofmt`: フォーマット確認
+    - `goimports`: インポート整理
+    - `vet`: Go の標準解析
+    - `errcheck`: エラーハンドリング漏れ検出
+    - `ineffassign`: 不要な代入検出
+    - `staticcheck`: 静的解析
+    - `govet`: 詳細な構造体チェック
+  - CI で golangci-lint 実行:
+    - `golangci-lint run ./internal ./cmd --timeout=5m`
+    - 1つでもエラーがあれば CI 失敗
+  - ローカル開発時の実行スクリプト: `make lint`
+  - ファイル: `.golangci.yml` 新規作成、Makefile に lint ターゲット追加
+  - 検証: `golangci-lint run ./...` で local テスト
+- 進捗: 未実装
+
+### 12.3. Svelte コンポーネントテスト
+- 目的: フロントエンドのコンポーネント（Header/Calendar/Weather/Tasks）の動作を自動テストするます
+- 完了条件: Vitest でコンポーネントテストが実装でき、CI内で自動実行されるます
+- 実施内容:
+  - テストフレームワーク導入: `vitest` + `@testing-library/svelte`
+    - `npm install -D vitest @testing-library/svelte @testing-library/dom`
+  - テストファイル作成: `frontend/src/lib/components/__tests__/` 配下
+    - `Header.test.js`: 時刻表示、日付フォーマット、エラーインジケーター点滅
+    - `Calendar.test.js`: イベント表示、日付ソート、色マッピング
+    - `Weather.test.js`: 気温表示、降水確率ボタン、アラート表示
+    - `Tasks.test.js`: タスク表示、ソート順序、優先度色分け
+  - テスト内容（各コンポーネント）:
+    - Props 受け取りのテスト（データ型・デフォルト値）
+    - 条件分岐の表示確認（イベント有無、エラー有無など）
+    - イベントハンドリング（クリック、フォーム入力）
+    - スクリーンショットテスト（ビジュアルリグレッション）
+  - CI 統合: `.github/workflows/ci.yml` に以下を追加
+    - `npm run test` → すべてのコンポーネントテスト実行
+    - テスト失敗で CI 失敗
+  - ローカル実行: `npm run test`, `npm run test -- --watch`
+  - ファイル: `frontend/src/lib/components/__tests__/*.test.js`
+  - 目標カバレッジ: コンポーネント部分で 70% 以上
+- 進捗: 未実装
+
+### 12.4. E2E テスト
+- 目的: バックエンド API ↔ フロントエンドの統合動作を自動テストするます
+- 完了条件: Playwright でバックエンド起動→API呼出→UI表示までの一連の流れが自動テストできるます
+- 実施内容:
+  - テストフレームワーク導入: `playwright`
+    - `npm install -D @playwright/test`
+  - テストシナリオ作成: `frontend/e2e/` 配下
+    - `api-integration.spec.js`: バックエンド API の動作確認
+      - `/api/status` → ok フィールド確認
+      - `/api/calendar` → イベント返却確認
+      - `/api/tasks` → ソート順序確認
+      - `/api/weather` → 天気データ確認
+    - `ui-display.spec.js`: UI表示確認
+      - ページロード → 時刻表示
+      - カレンダーウィジェット → イベント表示
+      - タスクウィジェット → タスク一覧表示
+      - 天気ウィジェット → 気温・降水確率表示
+    - `error-handling.spec.js`: エラーハンドリング
+      - バックエンド停止 → エラーインジケーター点灯
+      - 無効なデータ → フォールバック表示
+  - CI 統合: `.github/workflows/ci.yml` に以下を追加
+    - バックエンド起動: `go run ./cmd/server` (background)
+    - フロントエンドビルド: `npm run build`
+    - E2E テスト実行: `npx playwright test`
+    - テスト失敗で CI 失敗
+  - テスト実行時のタイムアウト設定（API遅延対応）
+  - ローカル実行: `npx playwright test`, `npx playwright test --ui`
+  - ファイル: `frontend/e2e/*.spec.js`, `playwright.config.js`
+- 進捗: 未実装
+
+### 12.5. API ドキュメント化（Swagger/OpenAPI）
+- 目的: バックエンド API 仕様を Swagger UI で可視化し、開発効率・保守性を向上させるます
+- 完了条件: `/docs` エンドポイントで Swagger UI にアクセスでき、すべての API エンドポイントがドキュメント化されるます
+- 実施内容:
+  - Go ライブラリ導入: `swaggo/swag`
+    - `go get -u github.com/swaggo/swag/cmd/swag`
+    - `go get -u github.com/swaggo/gin-swagger`
+  - API コメント作成（各ハンドラー関数に Swagger コメントを記述）:
+    ```go
+    // GetStatus GET /api/status
+    // @Summary Get current status
+    // @Description Returns ok, errors, and lastUpdated
+    // @Tags status
+    // @Produce json
+    // @Success 200 {object} StatusResponse
+    // @Router /api/status [get]
+    func (h *Handlers) GetStatus(c *gin.Context) { ... }
+    ```
+  - swag 自動生成: `swag init -g ./cmd/server/main.go`
+    - `docs/` ディレクトリに Swagger JSON/YAML 自動生成
+  - Gin ルートに Swagger UI 登録:
+    ```go
+    import "github.com/swaggo/gin-swagger"
+    router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    ```
+  - ドキュメント内容:
+    - `/api/status`: ステータス取得
+    - `/api/calendar`: カレンダーイベント取得
+    - `/api/tasks`: タスク一覧取得
+    - `/api/weather`: 天気情報取得
+  - ビルド: `swag init` → docs/ に生成
+  - 確認: `http://localhost:8080/docs/` で Swagger UI 表示
+  - ファイル: コメント追加（各ハンドラー）、`docs/` 自動生成
+- 進捗: 未実装
+
+### 12.6. ロギング強化（構造化ログ）
+- 目的: バックエンドに詳細なログを記録し、本番環境でのトラブルシューティングを効率化するます
+- 完了条件: 構造化ログ（JSON 形式）が出力され、エラー・アラートがログファイルに記録されるます
+- 実施内容:
+  - Go ロギングライブラリ導入: `zap` (Uber の構造化ログライブラリ)
+    - `go get -u go.uber.org/zap`
+  - Logger パッケージ作成: `internal/logger/logger.go`
+    - 環境（dev/production）による設定切り替え
+    - dev: コンソール出力、見やすいフォーマット
+    - production: JSON 形式、ファイル出力（ローテーション）
+  - ログレベル設定:
+    - DEBUG: 詳細デバッグ情報
+    - INFO: 一般情報（API呼出、キャッシュヒット）
+    - WARN: 警告（古いキャッシュ、リトライ）
+    - ERROR: エラー（API失敗、ネットワークエラー）
+  - ログ出力ポイント:
+    - API 呼出（method, path, duration）
+    - キャッシュ動作（hit/miss, TTL）
+    - 外部 API 通信（成功/失敗、レスポンス時間）
+    - エラーリカバリー（fallback キャッシュ使用）
+  - ファイル出力設定:
+    - `data/logs/` ディレクトリ作成
+    - ファイル: `familydashboard.log` (JSON 形式)
+    - ローテーション: サイズ 10MB またはファイル数 5 個まで
+  - main.go で logger 初期化
+  - 全ハンドラー・サービスで logger 使用
+  - ファイル: `internal/logger/logger.go` 新規作成、各パッケージで logger.Log() 使用
+- 進捗: 未実装
+
+### 12.7. ヘルスチェック API 改善
+- 目的: キオスク表示デバイス（Pi Zero 2 W）がバックエンド正常性を監視でき、詳細な状態を取得できるようにするます
+- 完了条件: GET /health エンドポイントが詳細な状態情報を返し、UI で監視・表示できるます
+- 実施内容:
+  - `/health` エンドポイント作成（既存の `/api/status` とは別）
+    - 軽量・高速レスポンス（UI 監視用）
+    - ステータス: "healthy", "degraded", "unhealthy"
+  - レスポンス形式:
+    ```json
+    {
+      "status": "healthy",
+      "timestamp": "2026-03-01T12:00:00Z",
+      "uptime": 3600.5,
+      "checks": {
+        "nextcloud": {
+          "status": "ok",
+          "lastCheck": "2026-03-01T12:00:00Z",
+          "latency": 245
+        },
+        "weather": {
+          "status": "ok",
+          "lastCheck": "2026-03-01T11:55:00Z",
+          "latency": 1250
+        },
+        "cache": {
+          "status": "ok",
+          "files": 3,
+          "totalSize": 2048
+        }
+      }
+    }
+    ```
+  - 詳細チェック項目:
+    - Nextcloud 接続テスト（タイムアウト時は degraded）
+    - 天気 API 接続テスト
+    - キャッシュファイル存在確認
+    - メモリ使用率（Raspberry Pi リソース監視）
+  - フロントエンド対応:
+    - Header コンポーネントで `/health` を定期監視（60秒ごと）
+    - status が "unhealthy" なら画面全体にアラート表示
+    - 詳細情報表示オプション（モーダルウィンドウ）
+  - CI での health check テスト
+  - ファイル: `internal/handlers/health.go` 新規作成、routes に登録
+- 進捗: 未実装
+
+---
+
+## 12の統合テスト・検証計画
+- 全サブタスク（12.1〜12.7）完了後、以下を実施:
+  1. CI の全パイプラインが正常に動作するか確認
+  2. E2E テストが全シナリオで PASS するか確認
+  3. Swagger UI ですべての API が表示されるか確認
+  4. ログファイルが正しく出力されているか確認
+  5. ヘルスチェック API がすべてのステータスを返すか確認
+  6. Raspberry Pi 環境（docker）で全機能が動作するか確認 
+
+### 13. GoogleからNextcloudへの移行計画
+- 目的: GoogleカレンダーとTasksをNextcloudのCalDAV/WebDAVに完全移行するます🥜
+- 完了条件: 移行計画が作成され、必要な変更点が明確になるます
+- 実施内容:
+  - 現在のGoogleサービスの利用箇所を洗い出しするます
+  - Nextcloud CalDAV/WebDAV API仕様の調査するます
+  - data/settings.json の構造変更計画（google → nextcloud）
+  - internal/services/google → internal/services/nextcloud への移行計画策定
+  - OAuth削除と Basic認証への切り替え計画
+  - 必要なGoライブラリの調査（CalDAV/WebDAVクライアント）
+- 進捗: 完了!✨ （2026-02-28）
+
+### 14. Nextcloud CalDAVクライアント実装
+- 目的: NextcloudのCalDAVプロトコルでカレンダーイベントを取得するます✨
+- 完了条件: /api/calendar エンドポイントがNextcloudから正しくデータ取得できるます
+- 実施内容:
+  - internal/services/nextcloud パッケージ作成
+  - CalDAVクライアント実装（Basic認証、HTTPリクエスト）
+  - カレンダーイベントの取得（今日〜7日分）
+  - iCalendar形式のパース（.ics → models.Event への変換）
+  - 既存APIレスポンス形式（models.CalendarResponse）と互換性維持
+  - 終日イベント/時間帯イベントの分類
+  - イベント色のマッピング（NextcloudのカラーIDに対応）
+  - サーバー側ソート実装（日付順）
+  - キャッシュ機能の統合（既存cache.Filecacheを使用）
+  - ユニットテスト作成（nextcloud_test.go）
+  - handlers.go, main.go への統合
+- 進捗: 完了!✨ （2026-02-28）
+  - client.go: Client構造体、NewClient、BasicAuth実装
+  - calendar.go: GetCalendarEvents、parseCalendarObject、convertToCalendarResponse実装
+  - iCalendarパース: 終日(YYYYMMDD)と時間指定(YYYYMMDDTHHmmss)に対応
+  - nextcloud_test.go: 9個のユニットテスト実装（すべてPASS✓）
+  - handlers.go: GetCalendarハンドラーをGoogleからNextcloudに切り替え
+  - main.go: Nextcloudクライアントのインスタンス化、コンテキスト統合
+  - settings.json: Nextcloud設定セクション追加
+  - ビルド: go build 成功 ✓
+  - テスト実行: go test ./internal/services/nextcloud/... 全9テストPASS ✓
+
+### 15. Nextcloud WebDAVタスク実装
+- 目的: NextcloudのCalDAV/WebDAVプロトコルでタスク（VTODO）を取得し、3段階ソートを実装するますのです🥜
+- 完了条件: /api/tasks エンドポイントがNextcloudから正しくタスク取得できて、サーバー側ソートが動作するます
+- 実施内容:
+  - tasks.go ファイルの完全実装
+    - GetTaskItems() 関数: Nextcloud WebDAV から VTODO 形式でタスク取得
+    - parseTaskObject() 関数: iCalendar の VTODO コンポーネント → models.TaskItem 変換
+    - parseTaskDateTime() 関数: DUE日付パース（YYYYMMDD と YYYYMMDDTHHmmss 対応）
+    - parsePriority() 関数: PRIORITY 値（1-9） → 優先度数値（1-3）に変換
+    - sortTasks() 関数: 3段階ソート実装
+      - 第1段: 期限（DueDate）が近い順、期限なしは最後
+      - 第2段: 優先度 降順（HIGH > MEDIUM > LOW）
+      - 第3段: createdAt の昇順（同条件時の安定性）
+    - キャッシュ統合: cache.FileCache を使って 5分 TTL でキャッシュ
+    - エラーハンドリング: 取得失敗時はキャッシュ返却（既存パターン踏襲）
+  - nextcloud_test.go への追加テスト
+    - TestSortTasks: 3段階ソート動作確認 ✓
+      - 期限がない場合の最後配置
+      - 同じ期限での優先度ソート
+      - 同じ優先度での createdAt 昇順
+    - TestParsePriority: PRIORITY 値の変換確認 ✓
+    - TestGetTasksPath: WebDAVパス生成テスト ✓
+    - すべてのテストは go test で実行可能
+  - handlers.go への統合
+    - GetTasks ハンドラーを nextcloud.(*Client).GetTaskItems() に切り替え済み ✓
+    - キャッシュキー: "nextcloud_tasks_items" に統一
+    - エラー時のキャッシュフォールバック実装
+  - models.go
+    - TaskItem 構造体が VTODO 属性に対応 ✓
+    - Priority フィールドで優先度を表現（1-3）
+- 進捗: 完了!✨ （2026-02-28）
+  - [x] tasks.go の完全実装（GetTaskItems, parseTaskObject, parseTaskDateTime, parsePriority, sortTasks）
+  - [x] parseTaskObject での VTODO コンポーネント処理
+  - [x] parsePriority ロジックで優先度数値決定（iCAL: 1-9 を 1-3 に変換）
+  - [x] sortTasks で確定的な 3段階ソート（期限 → 優先度 → createdAt）
+  - [x] キャッシュ統合（Read/Write の 4戻り値パターン準拠）
+  - [x] nextcloud_test.go でテスト実装（TestSortTasks, TestParsePriority, TestGetTasksPath）
+  - [x] go test ./internal/services/nextcloud/... で全テスト PASS ✓
+  - [x] handlers.go で GetTasks が nextcloud.GetTaskItems() に完全統合
+  - [x] go build 成功、エラーなし ✓
+  - [x] main.go で Nextcloud クライアント初期化済み、コンテキスト統合済み
+  - [x] settings.json に Nextcloud 設定セクション存在
+  - [x] より詳細な4個以上のタスク関連テスト実装完了
+
+### 15.5. Nextcloud複数カレンダー・タスクリスト対応
+- 目的: 複数のNextcloud カレンダーとタスクリストから同時にデータ取得して、統合表示するます🥜
+- 完了条件: /api/calendar と /api/tasks が複数カレンダー・タスクリストのデータを統合して返却でき、フロントエンドで正常に表示されるます
+- 実施内容:
+  - config.go の修正
+    - `CalendarName string` → `CalendarNames []string` に変更
+    - `TaskListName string` → `TaskListNames []string` に変更
+    - バリデーション追加（空配列チェック、デフォルト値設定）
+    - GetCalendarNames(), GetTaskListNames() メソッド追加
+  - settings.json の修正
+    - `"calendarName": "family"` → `"calendarNames": ["family", "work"]` に変更
+    - `"taskListName": "tasks"` → `"taskListNames": ["tasks", "personal"]` に変更
+    - settings.example.json も同様に更新
+  
+  **カレンダー（calendar.go）の修正**
+    - GetCalendarEvents() を複数カレンダー対応
+      - 各カレンダーに対して CalDAVクエリを実行
+      - 取得したイベントを統合（全カレンダーのイベントをマージ）
+      - 日付ごとに分類して返却（既存API仕様と互換性維持）
+    - キャッシュ戦略の決定
+      - 採用: 統合キャッシュ方式（キー: "nextcloud_calendar_events_all"）
+    - エラーハンドリング
+      - 1つのカレンダー取得失敗時も全体の失敗としない（部分的成功許容）
+      - エラー情報は /api/status に記録
+  
+  **タスク（tasks.go）の修正**
+    - GetTaskItems() を複数タスクリスト対応
+      - 各タスクリストに対して WebDAVクエリを実行（VTODO取得）
+      - 取得したタスクを統合（全リストのタスクをマージ）
+      - 既存の 3段階ソート（期限→優先度→createdAt）を統合後に適用
+      - 返却形式は既存 TasksResponse と互換性維持
+    - キャッシュ戦略の決定
+      - 採用: 統合キャッシュ方式（キー: "nextcloud_tasks_items_all"）
+    - エラーハンドリング
+      - 1つのタスクリスト取得失敗時も全体の失敗としない（部分的成功許容）
+      - エラー情報は /api/status に記録
+  
+  **テスト追加（nextcloud_test.go）**
+    - TestGetMultipleCalendars: 複数カレンダーからの取得テスト
+    - TestGetMultipleTaskLists: 複数タスクリストからの取得テスト
+    - テストデータ: 2つ以上のカレンダー、2つ以上のタスクリストをシミュレート
+    - イベント・タスク統合ロジック確認
+      - イベント: 重複チェック、順序確認（日付順）
+      - タスク: 重複チェック、3段階ソートが統合後も正しく動作
+  
+  **ハンドラー・モデル（変更なし）**
+    - handlers.go: GetCalendar, GetTasks は既存のまま（API仕様不変）
+    - models.go: CalendarResponse, TasksResponse 構造体は据え置き
+
+- 進捗: 完了✨ （2026-02-28）
+  - [x] config.go で CalendarName → CalendarNames, TaskListName → TaskListNames に変更
+  - [x] バリデーション実装（空配列チェック、デフォルト値設定）
+  - [x] settings.json, settings.example.json を更新（calendarNames, taskListNames 配列化）
+  - [x] calendar.go で GetCalendarEvents() を複数カレンダー対応
+  - [x] tasks.go で GetTaskItems() を複数タスクリスト対応
+  - [x] キャッシュキー統合戦略の実装（calendarと tasks 両方）
+  - [x] エラー部分成功の許容実装（両方）
+  - [x] nextcloud_test.go で複数カレンダーテスト追加
+  - [x] nextcloud_test.go で複数タスクリストテスト追加
+  - [x] go build 成功、エラーなし
+  - [x] go test ./internal/services/nextcloud/... で全テスト PASS
+  - [x] 全体ビルド（go build ./...）成功
+
+### 16. OAuth削除・設定更新
+- 目的: Googleからのすべての認証機構を削除し、Nextcloud Basic認証のみに統一するます🥜
+- 完了条件: Google OAuth 関連コード、/auth/** エンドポイント、トークンファイル参照がすべて削除され、アプリが正常に起動・動作するます
+- 実施内容:
+  - handlers.go からの OAuth ハンドラー削除
+    - AuthLogin ハンドラー関数の削除（現在コメント化）
+    - AuthCallback ハンドラー関数の削除（現在コメント化）
+    - Google OAuth フロー関連のコメントも削除
+  - routes.go からの OAuth ルート削除
+    - /auth/login エンドポイント登録を削除
+    - /auth/callback エンドポイント登録を削除
+    - /auth グループがあればそれも削除
+  - main.go からの Google OAuth 初期化削除
+    - googleClient の生成・初期化コード削除
+    - LoadTokens() 呼び出し削除
+    - ctx.Set("google", ...) のコンテキスト登録削除
+  - internal/services/google パッケージの削除検討
+    - client.go, calendar.go, tasks.go, google_test.go を削除するか、ドキュメント化して保留するか判断
+    - 判断: 一旦 README に「このパッケージは互換性のため残している」とコメント
+  - data/tokens.json の削除
+    - Google トークン保存ファイルを削除
+    - 今後は Nextcloud 設定ファイル（settings.json）のみ使用
+  - config.go（internal/config/config.go）の更新
+    - Google 構造体は残し、互換性維持（空のまま）
+    - Nextcloud 構造体がメインである旨をコメント化
+  - copilot-instructions.md の更新
+    - 「外部プロバイダ」セクションの Google API 記述を削除
+    - Nextcloud CalDAV/WebDAV に集約
+  - ユニットテスト・ビルド確認
+    - go build -o familydashboard ./cmd/server で成功
+    - go test ./internal/... で既存テスト全PASS
+    - OAuth関連テストは削除
+- 進捗: 完了✨ （2026-02-28）
+  - [x] handlers.go の AuthLogin/AuthCallback 削除（コメントアウト部分を完全削除）
+  - [x] routes.go の /auth/* 削除（コメントアウト部分を完全削除）
+  - [x] main.go の google クライアント初期化削除（すでに存在せず、確認済み）
+  - [x] data/tokens.json 削除（すでに存在せず、確認済み）
+  - [x] internal/services/google の状態決定 → **完全削除** を選択、実行完了
+  - [x] handlers_test.go を修正（google → nextcloud に置き換え、テストキャッシュキー更新）
+  - [x] config.go の Nextcloud フォーカス化（Google 構造体にレガシーコメント追加）
+  - [x] copilot-instructions.md の Google API 記述削除、Nextcloud 仕様に更新
+  - [x] go build 成功、エラーなし ✓
+  - [x] go mod tidy 実行完了 ✓
+  - [x] grep で Google, OAuth, tokens.json 参照確認 → 残りはすべてコメントまたはレガシー設定のみ ✓
+
+### 17. Nextcloud統合テスト
+- 目的: 全API エンドポイント、キャッシュ、エラーハンドリング、フロントエンド表示を実環境で検証するます🥜
+- 完了条件: 実際のNextcloudサーバーに接続して、すべてのデータが正しく取得でき、UIに表示されるます
+- 実施内容:
+  - 準備作業
+    - テスト用 Nextcloud サーバー環境の用意（ローカル or クラウド）
+    - Settings ファイルに Nextcloud サーバ情報を設定
+      - serverUrl: Nextcloud のアドレス（https://nextcloud.example.com など）
+      - username: テスト用ユーザー名
+      - password: テスト用パスワード
+      - calendarName: テスト用カレンダー（例: "family"）
+      - taskListName: テスト用タスクリスト（例: "tasks"）
+    - テスト用カレンダーに複数のイベント（終日・時間指定混在）を作成
+    - テスト用タスクリストに複数のタスク（優先度・期限別）を作成
+  - バックエンド API テスト
+    - GET /api/status
+      - レスポンス JSON の ok フィールド確認（true/false）
+      - lastUpdated フィールドのタイムスタンプ確認
+      - エラーが存在しないか確認（"errors": []）
+    - GET /api/calendar
+      - 今日〜7日のイベント取得確認
+      - 終日イベントと時間帯イベントの混在表示確認
+      - イベント色が返却されているか確認
+      - タイムゾーン Asia/Tokyo で正確に表示されるか確認
+    - GET /api/tasks
+      - タスク一覧取得確認
+      - 3段階ソート（期限→優先度→createdAt）の順序確認
+      - 期限切れタスク、期限なしタスクの正確な表示
+      - 優先度 HIGH/MEDIUM/LOW の判定確認
+    - GET /api/weather
+      - 天気データ取得確認（既存天気API、独立テスト）
+      - 気温、降水確率などが正確に取得されるか
+  - キャッシュ動作確認
+    - /api/calendar 取得 → cache/nextcloud_calendar_events.json 作成確認
+    - /api/tasks 取得 → cache/nextcloud_tasks_items.json 作成確認
+    - 2回目のリクエストでキャッシュから返却されるか確認
+    - TTL（5分）でキャッシュが更新されるか確認
+  - エラーハンドリング確認
+    - Nextcloud サーバーを停止 → バックエンド起動 → API 呼び出し
+      - キャッシュが存在する場合: 古いデータを返却しつつ error を挙げるか
+      - キャッシュが存在しない場合: エラーメッセージを返却するか
+    - Nextcloud 認証情報误り (password 間違い) → エラーログ確認
+    - ネットワーク遅延/タイムアウト → エラー記録とキャッシュ返却確認
+  - フロントエンド統合テスト
+    - ブラウザで http://localhost:8080 にアクセス
+    - Header コンポーネント
+      - 現在時刻（HH:MM）が Asia/Tokyo で正確に表示されるか
+      - 日付（MM月DD日(曜日)）が正確か
+      - エラーインジケーターが点灯した場合の点滅動作確認
+    - Calendar コンポーネント
+      - 今日〜7日分のイベント表示確認
+      - 終日イベントが日付欄の上部に表示されるか
+      - イベント色が正確に表示されるか（Nextcloud のカラー対応）
+      - タイムスタンプフォーマットが正確か（HH:mm-HH:mm など）
+    - Tasks コンポーネント
+      - 3段階ソート済みタスクが表示されるか
+      - 優先度による枠線色（HIGH=赤、MEDIUM=オレンジ、LOW=緑）が正確か
+      - 期限表示形式が正確か（YYYY-MM-DD など）
+      - 表示行数制限で「他 N 件」が表示されるか
+      - 期限切れタスクが強調表示されるか
+    - Weather コンポーネント
+      - 気温・天況が正確に表示されるか
+      - 時間ごと降水確率が正確か
+      - 警報がある場合、点滅インジケーター表示されるか
+  - UI/UX レスポンシブ確認
+    - FHD（1920x1080）解像度で表示確認
+    - 約2m 視聴距離でテキストが読みやすいか（フォントサイズ確認）
+    - 余白・レイアウトが適正か（左60% カレンダー、右40% 天気/タスク）
+    - スクロール不要か、固定レイアウトが保たれているか
+  - ビルド・デプロイ確認
+    - go build -o familydashboard ./cmd/server が成功するか
+    - ./familydashboard 実行でバックエンド起動
+    - 上記 API テスト全項目をクリア
+    - docker build, docker run での動作確認 (Raspberry Pi 環境など)
+- 進捗: 完了✨ （2026-02-28）
+  - [x] Nextcloud サーバー環境の用意（rihow-home.duckdns.org）
+  - [x] settings.json にNextcloud 情報を入力（6個のカレンダー、1個のタスクリスト）
+  - [x] テスト用カレンダー/タスク作成（family, takuya, megumi, yutaka, aoi, daigo カレンダー）
+  - [x] /api/status レスポンス確認（正常動作✓）
+  - [x] /api/calendar 取得と表示確認（複数カレンダー統合動作✓）
+  - [x] /api/tasks 取得、ソート、表示確認（3段階ソート動作✓）
+  - [x] キャッシュファイル動作確認（nextcloud_calendar_events_all.json, nextcloud_tasks_items_all.json 生成確認✓）
+  - [x] エラーハンドリング（サーバー停止、認証誤り、タイムアウト）確認（キャッシュ返却動作確認✓）
+  - [x] フロントエンド各コンポーネント表示確認（Header, Calendar, Tasks, Weather すべて正常表示✓）
+  - [x] UI 視認性・レイアウト確認（FHD、2m 視聴距離）（読みやすさ確認✓）
+  - [x] docker 環境でのビルド・起動確認（docker-compose.yml 動作確認✓）
+  - [x] すべてのテスト項目でOK、エラーなし、ビルド成功✓
+
+### 18. Nextcloudカレンダー色取得対応
+- 目的: Nextcloudのカレンダーごとの色を取得して、イベント表示色に正しく反映するます🥜
+- 完了条件: カレンダー単位の色がAPIレスポンスに反映され、UI上でカレンダーごとに色分け表示されるます
+- 実施内容:
+  - Nextcloud CalDAV/WebDAV でカレンダーコレクションの色プロパティ（calendar-color）取得を実装
+  - カレンダー名 → 色コード（#RRGGBB）のマップを構築し、イベント変換時に適用
+  - VEVENTのCOLORがある場合はイベント色を優先し、ない場合はカレンダー色を使用
+  - カラー値の正規化（#RGB→#RRGGBB、先頭#補完）と不正値フォールバックを追加
+  - 既存キャッシュ（nextcloud_calendar_events_all）の再取得条件を確認し、反映手順を明記
+  - ユニットテスト追加（色優先順位、フォーマット変換、フォールバック）
+  - ローカル実行で /api/calendar とフロント表示を確認
+- 進捗: 完了✨ （2026-02-28）
+  - [x] カレンダーコレクション色取得実装（PROPFIND / Depth:0）
+  - [x] イベント色適用ロジック（優先順位）実装
+  - [x] 色コード正規化・フォールバック実装（#RGB/#RRGGBB/#RRGGBBAA対応）
+  - [x] テスト追加・実行（go test ./internal/services/nextcloud/... PASS）
+  - [x] APIレスポンス確認（/api/calendar で複数カレンダー色を確認）
+  - [x] フロント表示反映条件を確認（Calendar.svelte は event.color を枠線に適用）
 
 ---
 

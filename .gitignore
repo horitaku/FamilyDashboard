@@ -3,6 +3,7 @@ node_modules/
 .cache/
 frontend/node_modules/
 frontend/dist/
+frontend/build/
 bin/
 dist/
 coverage/
@@ -26,6 +27,8 @@ go.work
 go.work.sum
 server
 server.exe
+familydashboard
+familydashboard.exe
 
 # Track cmd/server even if a global ignore rule exists
 !cmd/server/

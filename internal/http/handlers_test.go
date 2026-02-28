@@ -12,7 +12,7 @@ import (
 	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
-	"github.com/rihow/FamilyDashboard/internal/services/google"
+	"github.com/rihow/FamilyDashboard/internal/services/nextcloud"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
 	"github.com/rihow/FamilyDashboard/internal/status"
 )
@@ -32,20 +32,27 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 			CityName: "姫路市",
 			Country:  "JP",
 		},
+		Nextcloud: config.Nextcloud{
+			ServerURL:     "https://nextcloud.example.com",
+			Username:      "testuser",
+			Password:      "testpass",
+			CalendarNames: []string{"family"},
+			TaskListNames: []string{"tasks"},
+		},
 	}
 
 	fc := cache.New(t.TempDir())
 	seedCache(t, fc, cfg)
 
 	weatherClient := weather.NewClient(fc, "http://localhost:8080")
-	googleClient := google.NewClient(fc, cfg)
+	nextcloudClient, _ := nextcloud.NewClient(fc, cfg)
 	errorStore := status.NewErrorStore()
 
 	router.Use(func(ctx *gin.Context) {
 		ctx.Set("config", cfg)
 		ctx.Set("cache", fc)
 		ctx.Set("weather", weatherClient)
-		ctx.Set("google", googleClient)
+		ctx.Set("nextcloud", nextcloudClient)
 		ctx.Set("errorStore", errorStore)
 		ctx.Next()
 	})
@@ -97,7 +104,7 @@ func seedCache(t *testing.T, fc *cache.FileCache, cfg *config.Config) {
 			},
 		},
 	}
-	if _, err := fc.Write("google_calendar_events", calendarPayload, map[string]string{"source": "test"}); err != nil {
+	if _, err := fc.Write("nextcloud_calendar_events_all", calendarPayload, map[string]string{"source": "test"}); err != nil {
 		t.Fatalf("seed calendar cache: %v", err)
 	}
 
@@ -114,7 +121,7 @@ func seedCache(t *testing.T, fc *cache.FileCache, cfg *config.Config) {
 			},
 		},
 	}
-	if _, err := fc.Write("google_tasks_items", tasksPayload, map[string]string{"source": "test"}); err != nil {
+	if _, err := fc.Write("nextcloud_tasks_items_all", tasksPayload, map[string]string{"source": "test"}); err != nil {
 		t.Fatalf("seed tasks cache: %v", err)
 	}
 }

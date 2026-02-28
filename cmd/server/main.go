@@ -9,7 +9,7 @@ import (
 	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	httproutes "github.com/rihow/FamilyDashboard/internal/http"
-	"github.com/rihow/FamilyDashboard/internal/services/google"
+	"github.com/rihow/FamilyDashboard/internal/services/nextcloud"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
 	"github.com/rihow/FamilyDashboard/internal/status"
 )
@@ -38,16 +38,13 @@ func main() {
 	// 天気APIクライアントを初期化するます
 	weatherClient := weather.NewClient(fc, "http://localhost:8080")
 
-	// Google APIクライアントを初期化するます
-	googleClient := google.NewClient(fc, cfg)
-
-	// 保存されたトークンを読み込む（以前にOAuth認可済みの場合）
-	if err := googleClient.LoadTokens("./data/tokens.json"); err != nil {
-		fmt.Printf("⚠️ トークン読込エラー: %v\n", err)
-		// エラーでも継続する（トークンなしで開始してもOK）
+	// Nextcloud CalDAV/WebDAV クライアントを初期化するます
+	nextcloudClient, err := nextcloud.NewClient(fc, cfg)
+	if err != nil {
+		fmt.Printf("⚠️ Nextcloud クライアント初期化エラー: %v\n", err)
+		// エラーでも継続する（設定不足の場合はダミーデータで動作）
 	} else {
-		fmt.Printf("✨ Google OAuth トークンを読み込みました\n")
-		fmt.Printf("🔍 [DEBUG] トークン状態: IsTokenValid=%v\n", googleClient.IsTokenValid())
+		fmt.Printf("✨ Nextcloud クライアントの初期化成功\n")
 	}
 
 	// Ginルーターを初期化
@@ -58,7 +55,7 @@ func main() {
 		ctx.Set("config", cfg)
 		ctx.Set("cache", fc)
 		ctx.Set("weather", weatherClient)
-		ctx.Set("google", googleClient)
+		ctx.Set("nextcloud", nextcloudClient)
 		ctx.Set("errorStore", errorStore)
 		ctx.Next()
 	})
@@ -67,10 +64,10 @@ func main() {
 	httproutes.SetupRoutes(router)
 
 	// 静的ファイル配信の設定（Svelte ビルド成果物を配信）
-	// 環境変数 FRONTEND_DIST_PATH でディレクトリを指定可能（デフォルト: ./frontend/dist）
+	// 環境変数 FRONTEND_DIST_PATH でディレクトリを指定可能（デフォルト: ./frontend/build、vite.config.js で指定）
 	frontendDistPath := os.Getenv("FRONTEND_DIST_PATH")
 	if frontendDistPath == "" {
-		frontendDistPath = "./frontend/dist"
+		frontendDistPath = "./frontend/build"
 	}
 
 	// assetsディレクトリを配信（JS/CSS/画像など）

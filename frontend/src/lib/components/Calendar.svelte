@@ -6,6 +6,7 @@
   export let daysToShow = 7; // デフォルト: 7日分
   export let skipDays = 0;   // デフォルト: 0日スキップ
   export let title = '';     // デフォルト: タイトルなし
+  export let showDate = false; // デフォルト: 日付非表示
 
   let calendarData = null;
   let error = null;
@@ -112,7 +113,7 @@
               <div class="all-day-section">
                 {#each day.allDay as event}
                   <div class="event all-day-event" style={getEventStyle(event)}>
-                    {#if title === '今後の予定'}
+                    {#if showDate}
                       <span class="event-date">{formatShortDate(day.date)}</span>
                     {/if}
                     <span class="event-title">{event.title}</span>
@@ -124,7 +125,7 @@
               <div class="timed-events">
                 {#each day.timed as event}
                   <div class="event timed-event" style={getEventStyle(event)}>
-                    {#if title === '今後の予定'}
+                    {#if showDate}
                       <span class="event-date">{formatShortDate(day.date)}</span>
                     {/if}
                     <span class="event-time">
@@ -239,6 +240,7 @@
     color: #6b7280;
     white-space: nowrap;
     min-width: 40px;
+    text-align: center;
   }
 
   .event-time {
