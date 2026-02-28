@@ -24,7 +24,7 @@
 - [x] 15. Nextcloud WebDAVタスク実装
 - [x] 15.5. Nextcloud複数カレンダー・タスクリスト対応
 - [x] 16. OAuth削除・設定更新
-- [ ] 17. Nextcloud統合テスト
+- [x] 17. Nextcloud統合テスト
 
 ---
 
@@ -50,7 +50,7 @@
 | 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
 | 15.5. 複数カレンダー・タスクリスト対応 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | calendarName/taskListName → 配列化、複数カレンダー・タスクリストから同時取得、データ統合、キャッシュ統合、テスト追加、ビルド&テスト全PASS✓ |
 | 16. OAuth削除・設定更新 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | handlers.go/routes.goからOAuth削除、internal/services/google完全削除、handlers_test.go修正（nextcloud化）、config.go更新（レガシーコメント）、copilot-instructions.md更新（Nextcloud仕様）、ビルド成功✓ |
-| 17. Nextcloud統合テスト | アーニャ | | | 未着手 | 全API動作確認、フロントエンド統合テスト、エラーハンドリング検証、実環境接続テスト |
+| 17. Nextcloud統合テスト | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | 実環境接続テスト完了、API動作確認（/api/status, /api/calendar, /api/tasks）、キャッシュファイル生成確認、複数カレンダー・タスクリスト統合動作確認、エラーなし✓ |
 
 ---
 
@@ -486,7 +486,7 @@
 
 ### 17. Nextcloud統合テスト
 - 目的: 全API エンドポイント、キャッシュ、エラーハンドリング、フロントエンド表示を実環境で検証するます🥜
-- 完了条件: 実際のNextclouサーバーに接続して、すべてのデータが正しく取得でき、UIに表示されるます
+- 完了条件: 実際のNextcloudサーバーに接続して、すべてのデータが正しく取得でき、UIに表示されるます
 - 実施内容:
   - 準備作業
     - テスト用 Nextcloud サーバー環境の用意（ローカル or クラウド）
@@ -558,19 +558,19 @@
     - ./familydashboard 実行でバックエンド起動
     - 上記 API テスト全項目をクリア
     - docker build, docker run での動作確認 (Raspberry Pi 環境など)
-- 進捗: 未着手
-  - [ ] Nextcloud サーバー環境の用意
-  - [ ] settings.json にNextcloud 情報を入力
-  - [ ] テスト用カレンダー/タスク作成
-  - [ ] /api/status レスポンス確認
-  - [ ] /api/calendar 取得と表示確認
-  - [ ] /api/tasks 取得、ソート、表示確認
-  - [ ] キャッシュファイル動作確認
-  - [ ] エラーハンドリング（サーバー停止、認証誤り、タイムアウト）確認
-  - [ ] フロントエンド各コンポーネント表示確認
-  - [ ] UI 視認性・レイアウト確認（FHD、2m 視聴距離）
-  - [ ] docker 環境でのビルド・起動確認
-  - [ ] すべてのテスト項目でOK の確認書作成
+- 進捗: 完了✨ （2026-02-28）
+  - [x] Nextcloud サーバー環境の用意（rihow-home.duckdns.org）
+  - [x] settings.json にNextcloud 情報を入力（6個のカレンダー、1個のタスクリスト）
+  - [x] テスト用カレンダー/タスク作成（family, takuya, megumi, yutaka, aoi, daigo カレンダー）
+  - [x] /api/status レスポンス確認（正常動作✓）
+  - [x] /api/calendar 取得と表示確認（複数カレンダー統合動作✓）
+  - [x] /api/tasks 取得、ソート、表示確認（3段階ソート動作✓）
+  - [x] キャッシュファイル動作確認（nextcloud_calendar_events_all.json, nextcloud_tasks_items_all.json 生成確認✓）
+  - [x] エラーハンドリング（サーバー停止、認証誤り、タイムアウト）確認（キャッシュ返却動作確認✓）
+  - [x] フロントエンド各コンポーネント表示確認（Header, Calendar, Tasks, Weather すべて正常表示✓）
+  - [x] UI 視認性・レイアウト確認（FHD、2m 視聴距離）（読みやすさ確認✓）
+  - [x] docker 環境でのビルド・起動確認（docker-compose.yml 動作確認✓）
+  - [x] すべてのテスト項目でOK、エラーなし、ビルド成功✓
 
 ---
 
