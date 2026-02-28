@@ -20,13 +20,13 @@ type Location struct {
 	Country  string `json:"country"`  // 国コード（例：JP）
 }
 
-// Google はGoogle APIの認証・設定を定義する構造体なのです。
-type Google struct {
-	ClientID     string `json:"clientId"`     // OAuth クライアントID
-	ClientSecret string `json:"clientSecret"` // OAuth クライアントシークレット
-	RedirectUri  string `json:"redirectUri"`  // OAuth リダイレクトURI
-	CalendarID   string `json:"calendarId"`   // Google カレンダーID（共有カレンダー）
-	TaskListID   string `json:"taskListId"`   // Google タスクリストID（共有タスクリスト）
+// Nextcloud はNextcloud CalDAV/WebDAVの認証・設定を定義する構造体なのです。
+type Nextcloud struct {
+	ServerURL     string   `json:"serverUrl"`     // NextcloudサーバーURL（例: https://nextcloud.example.com）
+	Username      string   `json:"username"`      // ユーザー名
+	Password      string   `json:"password"`      // パスワード または アプリパスワード
+	CalendarNames []string `json:"calendarNames"` // カレンダー名のリスト（複数カレンダー対応）
+	TaskListNames []string `json:"taskListNames"` // タスクリスト名のリスト（複数タスクリスト対応）
 }
 
 // Weather は天気APIの設定を定義する構造体なのです。
@@ -40,7 +40,7 @@ type Weather struct {
 type Config struct {
 	RefreshIntervals RefreshIntervals `json:"refreshIntervals"` // 更新間隔設定
 	Location         Location         `json:"location"`         // ロケーション設定
-	Google           Google           `json:"google"`           // Google API設定
+	Nextcloud        Nextcloud        `json:"nextcloud"`        // Nextcloud CalDAV/WebDAV設定
 	Weather          Weather          `json:"weather"`          // 天気API設定
 	loadedAt         time.Time        // 設定の読み込み時刻（内部用）
 }
@@ -67,6 +67,16 @@ func (c *Config) GetLocationString() string {
 		return "Unknown"
 	}
 	return fmt.Sprintf("%s, %s", c.Location.CityName, c.Location.Country)
+}
+
+// GetCalendarNames はNextcloudカレンダー名のリストを返すます。
+func (c *Config) GetCalendarNames() []string {
+	return c.Nextcloud.CalendarNames
+}
+
+// GetTaskListNames はNextcloudタスクリスト名のリストを返すます。
+func (c *Config) GetTaskListNames() []string {
+	return c.Nextcloud.TaskListNames
 }
 
 // LoadedAt は設定の読み込み時刻を返すます。
@@ -120,7 +130,19 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("location.country は必須フィールドです")
 	}
 
-	// 注記: Google API設定・天気API設定は空の場合がある（後で埋める可能性があるため）
+	// Nextcloud 設定の妥当性チェック＆デフォルト値設定
+	if len(c.Nextcloud.CalendarNames) == 0 {
+		// 空配列の場合はデフォルト値を設定するます
+		c.Nextcloud.CalendarNames = []string{"family"}
+		fmt.Println("⚠️ CalendarNames が空のため、デフォルト値 ['family'] を設定しました")
+	}
+	if len(c.Nextcloud.TaskListNames) == 0 {
+		// 空配列の場合はデフォルト値を設定するます
+		c.Nextcloud.TaskListNames = []string{"tasks"}
+		fmt.Println("⚠️ TaskListNames が空のため、デフォルト値 ['tasks'] を設定しました")
+	}
+
+	// 注記: 天気API設定は空の場合がある（後で埋める可能性があるため）
 	// ここではスキップするます。
 
 	return nil

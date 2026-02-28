@@ -9,7 +9,7 @@ import (
 	"github.com/rihow/FamilyDashboard/internal/cache"
 	"github.com/rihow/FamilyDashboard/internal/config"
 	"github.com/rihow/FamilyDashboard/internal/models"
-	"github.com/rihow/FamilyDashboard/internal/services/google"
+	"github.com/rihow/FamilyDashboard/internal/services/nextcloud"
 	"github.com/rihow/FamilyDashboard/internal/services/weather"
 	"github.com/rihow/FamilyDashboard/internal/status"
 )
@@ -46,8 +46,8 @@ func GetStatus(ctx *gin.Context) {
 		}
 
 		lastUpdated.Weather = readFetchedAt(fc, fmt.Sprintf("weather:%s:%s", country, cityName))
-		lastUpdated.Calendar = readFetchedAt(fc, "google_calendar_events")
-		lastUpdated.Tasks = readFetchedAt(fc, "google_tasks_items")
+		lastUpdated.Calendar = readFetchedAt(fc, "nextcloud_calendar_events_all")
+		lastUpdated.Tasks = readFetchedAt(fc, "nextcloud_tasks_items_all")
 	}
 
 	response := models.StatusResponse{
@@ -65,14 +65,14 @@ func GetStatus(ctx *gin.Context) {
 // ============================================================================
 
 // GetCalendar は /api/calendar のGETハンドラーなのです。
-// Google Calendar APIからイベントを取得し、最大7日分を返すます。
-// トークンが無い場合はダミーデータを返すのです。
+// Nextcloud CalDAV からイベントを取得し、最大7日分を返すます。
+// クライアントが無い場合はダミーデータを返すのです。
 func GetCalendar(ctx *gin.Context) {
-	// コンテキストから Google クライアントと設定を取得するます
-	googleRaw, exists := ctx.Get("google")
+	// コンテキストから Nextcloud クライアントと設定を取得するます
+	nextcloudRaw, exists := ctx.Get("nextcloud")
 	if !exists {
-		// Google クライアントが無い場合はダミーデータを返す
-		fmt.Println("⚠️ Google クライアントが見つかりません。ダミーデータを返すのです")
+		// Nextcloud クライアントが無い場合はダミーデータを返す
+		fmt.Println("⚠️ Nextcloud クライアントが見つかりません。ダミーデータを返すのです")
 		dummyResp := &models.CalendarResponse{
 			Days: []models.CalendarDay{
 				{
@@ -85,10 +85,10 @@ func GetCalendar(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, dummyResp)
 		return
 	}
-	googleClient := googleRaw.(*google.Client)
+	nextcloudClient := nextcloudRaw.(*nextcloud.Client)
 
-	// Google Calendar APIからイベントを取得するます
-	calendarResp, err := googleClient.GetCalendarEvents(ctx)
+	// Nextcloud CalDAV からイベントを取得するます
+	calendarResp, err := nextcloudClient.GetCalendarEvents(ctx)
 	if err != nil {
 		fmt.Printf("❌ カレンダーデータ取得エラー: %v\n", err)
 		setSourceError(ctx, "calendar", err)
@@ -111,24 +111,24 @@ func GetCalendar(ctx *gin.Context) {
 // ============================================================================
 
 // GetTasks は /api/tasks のGETハンドラーなのです。
-// Google Tasks APIからタスクを取得し、サーバー側ソート済みのタスクリストを返すます。
-// トークンが無い場合はダミーデータを返すのです。
+// Nextcloud WebDAV からタスクを取得し、サーバー側ソート済みのタスクリストを返すます。
+// クライアントが無い場合はダミーデータを返すのです。
 func GetTasks(ctx *gin.Context) {
-	// コンテキストから Google クライアントを取得するます
-	googleRaw, exists := ctx.Get("google")
+	// コンテキストから Nextcloud クライアントを取得するます
+	nextcloudRaw, exists := ctx.Get("nextcloud")
 	if !exists {
-		// Google クライアントが無い場合はダミーデータを返す
-		fmt.Println("⚠️ Google クライアントが見つかりません。ダミーデータを返すのです")
+		// Nextcloud クライアントが無い場合はダミーデータを返す
+		fmt.Println("⚠️ Nextcloud クライアントが見つかりません。ダミーデータを返すのです")
 		dummyResp := &models.TasksResponse{
 			Items: []models.TaskItem{},
 		}
 		ctx.JSON(http.StatusOK, dummyResp)
 		return
 	}
-	googleClient := googleRaw.(*google.Client)
+	nextcloudClient := nextcloudRaw.(*nextcloud.Client)
 
-	// Google Tasks APIからタスクを取得するます
-	tasksResp, err := googleClient.GetTaskItems(ctx)
+	// Nextcloud WebDAV からタスクを取得するます
+	tasksResp, err := nextcloudClient.GetTaskItems(ctx)
 	if err != nil {
 		fmt.Printf("❌ タスクデータ取得エラー: %v\n", err)
 		setSourceError(ctx, "tasks", err)
@@ -275,85 +275,4 @@ func readFetchedAt(fc *cache.FileCache, cacheKey string) string {
 		return ""
 	}
 	return entry.FetchedAt
-}
-
-// ============================================================================
-// /auth/login ハンドラー
-// ============================================================================
-
-// AuthLogin は Google OAuth ログインへのリダイレクトリンクを生成するのです。
-// ブラウザこのエンドポイントにアクセスするとGoogle ログイン画面に遷移するます。
-func AuthLogin(ctx *gin.Context) {
-	cfg := ctx.MustGet("config").(*config.Config)
-
-	if cfg.Google.ClientID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Google OAuth設定が未設定のです",
-		})
-		return
-	}
-
-	// OAuth 認可画面へのURL生成
-	// スコープ: Google Calendar と Google Tasks の読み取り権限
-	scopes := "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly"
-
-	authURL := fmt.Sprintf(
-		"https://accounts.google.com/o/oauth2/v2/auth?"+
-			"client_id=%s&"+
-			"redirect_uri=%s&"+
-			"response_type=code&"+
-			"scope=%s&"+
-			"access_type=offline",
-		cfg.Google.ClientID,
-		cfg.Google.RedirectUri,
-		scopes,
-	)
-
-	// リダイレクト
-	ctx.Redirect(http.StatusTemporaryRedirect, authURL)
-}
-
-// ============================================================================
-// /auth/callback ハンドラー
-// ============================================================================
-
-// AuthCallback は Google OAuth のコールバックハンドラーなのです。
-// クエリから "code" パラメータを受け取り、トークン取得を実行するます。
-func AuthCallback(ctx *gin.Context) {
-	// ユーザーが認可をキャンセルした場合
-	if err := ctx.Query("error"); err != "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"error": fmt.Sprintf("OAuth キャンセル: %s", err),
-		})
-		return
-	}
-
-	// 認可コードを取得
-	code := ctx.Query("code")
-	if code == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "認可コードが未設定のです",
-		})
-		return
-	}
-
-	// Google クライアントを取得
-	googleClient := ctx.MustGet("google").(*google.Client)
-
-	// OAuth認可コードフロー実行（トークン取得）
-	tokenResp, err := googleClient.OAuthAuthorizationCodeFlow(ctx, code)
-	if err != nil {
-		fmt.Printf("❌ OAuthエラー: %v\n", err)
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"error": fmt.Sprintf("OAuth フロー失敗: %v", err),
-		})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":       "認可成功したます！✨",
-		"access_token":  tokenResp.AccessToken[:20] + "...",
-		"expires_in":    tokenResp.ExpiresIn,
-		"refresh_token": "保存済み",
-	})
 }

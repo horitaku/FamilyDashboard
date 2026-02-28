@@ -31,9 +31,9 @@ cp data/settings.example.json data/settings.json
 nano data/settings.json
 ```
 
-### 3. Google OAuth 認証設定（必要な場合）
+### 3. Nextcloud CalDAV/WebDAV 設定（必要な場合）
 
-Google カレンダー・タスクを使用する場合は、[GOOGLE_SETUP.md](docs/GOOGLE_SETUP.md) を参照して OAuth クライアントを作成してください。
+Nextcloud カレンダー・タスクを使用する場合は、[NEXTCLOUD_SETUP.md](docs/NEXTCLOUD_SETUP.md) を参照してアプリパスワードやカレンダー名を設定してください。
 
 ### 4. Docker イメージをビルド
 
