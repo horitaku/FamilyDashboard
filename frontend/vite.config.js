@@ -22,9 +22,9 @@ export default defineConfig({
     },
   },
   define: {
-    // API ベース URL を環境変数から取得（デフォルト: バックエンド同じオリジン）
+    // API ベース URL を環境変数から取得（デフォルト: 相対パスで同じオリジン）
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-      process.env.VITE_API_BASE_URL || 'http://localhost:8080'
+      process.env.VITE_API_BASE_URL || ''
     ),
   },
 })
