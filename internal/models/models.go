@@ -85,11 +85,12 @@ type TaskItem struct {
 
 // WeatherResponse は /api/weather のレスポンスなのです。
 type WeatherResponse struct {
-	Location    string         `json:"location"`    // 場所（都市名など）
-	Current     CurrentWeather `json:"current"`     // 現在の天候
-	Today       TodayWeather   `json:"today"`       // 今日の天況
-	PrecipSlots []PrecipSlot   `json:"precipSlots"` // 時間帯ごとの降水確率
-	Alerts      []WeatherAlert `json:"alerts"`      // 注意報・警報
+	Location    string          `json:"location"`    // 場所（都市名など）
+	Current     CurrentWeather  `json:"current"`     // 現在の天候
+	Today       TodayWeather    `json:"today"`       // 今日の天況
+	PrecipSlots []PrecipSlot    `json:"precipSlots"` // 時間帯ごとの降水確率
+	Weekly      []WeeklyWeather `json:"weekly"`      // 週間天気予報（7日分）
+	Alerts      []WeatherAlert  `json:"alerts"`      // 注意報・警報
 }
 
 // CurrentWeather は現在の天況なのです。
@@ -106,6 +107,15 @@ type TodayWeather struct {
 	MaxTemp float64 `json:"maxTemp"` // 最高気温（℃）
 	MinTemp float64 `json:"minTemp"` // 最低気温（℃）
 	Summary string  `json:"summary"` // 概況
+}
+
+// WeeklyWeather は週間天気予報の1日分なのです。
+type WeeklyWeather struct {
+	Date      string  `json:"date"`      // 日付（YYYY-MM-DD）
+	MaxTemp   float64 `json:"maxTemp"`   // 最高気温（℃）
+	MinTemp   float64 `json:"minTemp"`   // 最低気温（℃）
+	Condition string  `json:"condition"` // 天候（"晴" "曇" "雨" など）
+	Icon      string  `json:"icon"`      // 天候アイコンコード
 }
 
 // PrecipSlot は時間帯ごとの降水確率なのです。

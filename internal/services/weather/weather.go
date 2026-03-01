@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"time"
 
@@ -36,8 +37,8 @@ type OpenMeteoWeatherResponse struct {
 
 // OpenMeteoWeatherData は Open-Meteo API の現在データなのです。
 type OpenMeteoWeatherData struct {
-	Temperature      float64 `json:"temperature"`
-	RelativeHumidity int     `json:"relative_humidity"`
+	Temperature      float64 `json:"temperature_2m"`
+	RelativeHumidity int     `json:"relative_humidity_2m"`
 	WindSpeed        float64 `json:"wind_speed_10m"`
 	WeatherCode      int     `json:"weather_code"`
 	Time             string  `json:"time"`
@@ -199,16 +200,40 @@ func (c *Client) convertToWeatherResponse(omResp *OpenMeteoWeatherResponse, city
 		Summary: condition,
 	}
 
-	// 時間帯ごとの降水確率を取得するます（最大6時間分）
+	// 時間帯ごとの降水確率を取得するます（現在時刻から次の3時間区切りから8スロット分）
 	precipSlots := []models.PrecipSlot{}
-	for i := 0; i < len(omResp.Hourly.Time) && i < 24; i++ {
-		// 3時間ごとにサンプリングするます
-		if i%3 == 0 {
+	jst := time.FixedZone("Asia/Tokyo", 9*3600)
+	now := time.Now().In(jst)
+
+	// hourly データから現在時刻以降の3時間区切りのものを8個取得するます
+	for i := 0; i < len(omResp.Hourly.Time) && len(precipSlots) < 8; i++ {
+		// 時刻文字列をパースして時間を取得するます（Asia/Tokyoとして扱う）
+		t, err := time.ParseInLocation("2006-01-02T15:04", omResp.Hourly.Time[i], jst)
+		if err != nil {
+			continue
+		}
+
+		// 現在時刻より未来で、かつ3時間区切りの時刻のみを取得するます
+		if t.After(now) && t.Hour()%3 == 0 {
+			// 降水確率を10の倍数に四捨五入するます（例: 8% -> 10%, 35% -> 40%, 23% -> 20%）
+			precipRounded := int(math.Round(float64(omResp.Hourly.PrecipitationProb[i])/10.0) * 10.0)
 			precipSlots = append(precipSlots, models.PrecipSlot{
-				Time:   fmt.Sprintf("%02d:00", i),
-				Precip: omResp.Hourly.PrecipitationProb[i],
+				Time:   fmt.Sprintf("%02d:00", t.Hour()),
+				Precip: precipRounded,
 			})
 		}
+	}
+
+	// 週間天気予報を取得するます（7日分）
+	weekly := []models.WeeklyWeather{}
+	for i := 0; i < len(omResp.Daily.Time) && i < 7; i++ {
+		weekly = append(weekly, models.WeeklyWeather{
+			Date:      omResp.Daily.Time[i],
+			MaxTemp:   omResp.Daily.MaxTemperature[i],
+			MinTemp:   omResp.Daily.MinTemperature[i],
+			Condition: weatherCodeToCondition(omResp.Daily.WeatherCode[i]),
+			Icon:      weatherCodeToIcon(omResp.Daily.WeatherCode[i]),
+		})
 	}
 
 	// 注意報・警報はここでは空にするます
@@ -220,6 +245,7 @@ func (c *Client) convertToWeatherResponse(omResp *OpenMeteoWeatherResponse, city
 		Current:     current,
 		Today:       today,
 		PrecipSlots: precipSlots,
+		Weekly:      weekly,
 		Alerts:      alerts,
 	}
 }
