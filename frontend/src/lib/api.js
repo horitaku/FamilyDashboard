@@ -7,8 +7,8 @@
 
 import { getMockResponse } from './mockData.js';
 
-// バックエンドのベースURL（デフォルト: 同じオリジン）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// バックエンドのベースURL（デフォルト: 相対パスで同じオリジン）
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 /**
