@@ -181,15 +181,15 @@
   .days-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 30px;
   }
 
   .day-header {
-    margin-bottom: 12px;
+    margin-bottom: 18px;
   }
 
   .day-date {
-    font-size: 1.5rem;
+    font-size: 2.25rem;
     font-weight: bold;
     margin: 0;
     color: #1f2937;
@@ -198,48 +198,48 @@
   .events-container {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
   }
 
   .all-day-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 9px;
   }
 
   .timed-events {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 9px;
   }
 
   .event {
-    padding: 8px 10px;
-    border-radius: 4px;
-    font-size: 1.3rem;
+    padding: 12px 15px;
+    border-radius: 6px;
+    font-size: 1.95rem;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 18px;
   }
 
   .all-day-event {
     background: #ffffff;
-    border-left: 8px solid #3b82f6;
+    border-left: 24px solid #3b82f6;
     color: #1f2937;
   }
 
   .timed-event {
     background: #ffffff;
-    border-left: 8px solid #6366f1;
+    border-left: 24px solid #6366f1;
     color: #1f2937;
   }
 
   .event-date {
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 1.35rem;
     color: #6b7280;
     white-space: nowrap;
-    min-width: 40px;
+    min-width: 60px;
     text-align: center;
   }
 
@@ -249,10 +249,10 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 0.75rem;
-    min-width: 38px;
+    font-size: 1.125rem;
+    min-width: 57px;
     line-height: 1.2;
-    gap: 2px;
+    gap: 3px;
   }
 
   .event-title {

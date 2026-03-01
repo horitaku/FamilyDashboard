@@ -113,7 +113,7 @@
   }
 
   .calendar-today {
-    width: 60%;
+    width: 50%;
     display: flex;
   }
 
@@ -123,26 +123,13 @@
   }
 
   .calendar-tomorrow {
-    width: 40%;
+    width: 50%;
     display: flex;
   }
 
   /* 明日エリアの予定を20%小さく */
   :global(.calendar-tomorrow .calendar-widget) {
     padding: 8px 12px 24px 12px;
-  }
-
-  :global(.calendar-tomorrow .event) {
-    font-size: 1.04rem;
-    padding: 6px 8px;
-  }
-
-  :global(.calendar-tomorrow .event-time) {
-    font-size: 0.6rem;
-  }
-
-  :global(.calendar-tomorrow .event-title) {
-    font-size: 1.04rem;
   }
 
   .calendar-upcoming {
@@ -158,7 +145,7 @@
 
   :global(.calendar-upcoming .widget-title) {
     margin: 0 0 6px 0;
-    font-size: 1.3rem;
+    font-size: 1.95rem;
   }
 
   :global(.calendar-upcoming .days-container) {
@@ -185,24 +172,24 @@
   }
 
   :global(.calendar-upcoming .event) {
-    font-size: 0.85rem;
-    padding: 4px 6px;
-    gap: 6px;
-    border-left-width: 4px;
+    font-size: 1.275rem;
+    padding: 6px 9px;
+    gap: 9px;
+    border-left-width: 18px;
   }
 
   :global(.calendar-upcoming .event-date) {
-    font-size: 0.75rem;
-    min-width: 30px;
+    font-size: 1.125rem;
+    min-width: 45px;
   }
 
   :global(.calendar-upcoming .event-time) {
-    font-size: 0.55rem;
-    min-width: 32px;
+    font-size: 0.825rem;
+    min-width: 48px;
   }
 
   :global(.calendar-upcoming .event-title) {
-    font-size: 0.85rem;
+    font-size: 1.275rem;
   }
 
   .right-column {
