@@ -29,7 +29,7 @@ services:
     # 環境変数（必要に応じて設定）
     environment:
       - TZ=Asia/Tokyo
-      - FRONTEND_DIST_PATH=/app/frontend/dist
+      - FRONTEND_DIST_PATH=/app/frontend/build
       # Google OAuth 設定（settings.json で管理）
       # - GOOGLE_CLIENT_ID=your-client-id
       # - GOOGLE_CLIENT_SECRET=your-client-secret
