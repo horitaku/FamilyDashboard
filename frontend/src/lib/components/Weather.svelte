@@ -294,17 +294,18 @@
   }
 
   .hourly-time {
-    font-size: 0.85rem;
+    font-size: 1.275rem;
     opacity: 0.85;
+    font-weight: 600;
   }
 
   .hourly-icon {
-    font-size: 1.6rem;
+    font-size: 2.4rem;
   }
 
   .hourly-precip {
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    font-weight: 700;
   }
 
   .weekly-section {
@@ -330,19 +331,20 @@
   }
 
   .weekly-day {
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     opacity: 0.85;
+    font-weight: 600;
   }
 
   .weekly-icon {
-    font-size: 1.2rem;
+    font-size: 1.8rem;
   }
 
   .weekly-temps {
     display: flex;
     gap: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 1.125rem;
+    font-weight: 700;
   }
 
   .weekly-max {
@@ -367,7 +369,7 @@
     gap: 12px;
     padding: 12px;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1.425rem;
     animation: blink-alert 2s ease-in-out infinite;
   }
 
@@ -389,15 +391,15 @@
   .alert-ok {
     background: rgba(16, 185, 129, 0.2);
     border-left: 6px solid #6ee7b7;
-    font-size: 0.9rem;
+    font-size: 1.35rem;
     animation: none;
   }
 
   .alert-severity {
     font-weight: bold;
-    font-size: 0.85rem;
+    font-size: 1.275rem;
     text-transform: uppercase;
-    min-width: 50px;
+    min-width: 75px;
   }
 
   .alert-title {
