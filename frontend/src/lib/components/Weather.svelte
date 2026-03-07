@@ -220,7 +220,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 12px 12px 8px 12px;
+    padding: 0px 12px;
     background: rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -323,7 +323,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
     padding: 8px 4px;
     background: rgba(15, 23, 42, 0.2);
     border-radius: 10px;
@@ -370,7 +369,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
     padding: 6px 0;
     background: rgba(15, 23, 42, 0.18);
     border-radius: 8px;
