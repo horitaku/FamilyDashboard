@@ -291,7 +291,7 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time, calen
 			event.Desc = description.Value
 		}
 		if location != nil {
-			event.Location = strings.TrimSpace(location.Value)
+			event.Location = normalizeLocation(location.Value)
 		}
 
 		events = append(events, eventWithDate{
@@ -302,6 +302,40 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time, calen
 	}
 
 	return events
+}
+
+// normalizeLocation は LOCATION 値を表示向けに正規化するます。
+// 実改行（\r/\n）またはエスケープ文字列（\n）以降は削除するます。
+func normalizeLocation(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+
+	if idx := strings.Index(trimmed, "\\\n"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+
+	if idx := strings.Index(trimmed, "\\\r"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+
+	if idx := strings.Index(trimmed, "\\n"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+
+	if idx := strings.Index(trimmed, "\n"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+
+	if idx := strings.Index(trimmed, "\r"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+
+	trimmed = strings.TrimSpace(trimmed)
+	trimmed = strings.TrimSuffix(trimmed, "\\")
+
+	return strings.TrimSpace(trimmed)
 }
 
 // normalizeHexColor は #RGB/#RRGGBB/#RRGGBBAA/先頭#なし の色を #RRGGBB に正規化するます。

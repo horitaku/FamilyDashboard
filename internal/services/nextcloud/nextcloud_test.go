@@ -478,3 +478,47 @@ func TestParseCalendarObjectLocation(t *testing.T) {
 		t.Fatalf("LOCATION取得失敗: got %q, want %q", events[0].event.Location, "姫路市民会館")
 	}
 }
+
+// TestParseCalendarObjectLocationWithNewline は LOCATION に改行が含まれる場合に改行以降を削除できるかのテストなのです。
+func TestParseCalendarObjectLocationWithNewline(t *testing.T) {
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	startDate := time.Date(2026, 2, 28, 0, 0, 0, 0, loc)
+	endDate := startDate.AddDate(0, 0, 7)
+
+	decode := func(t *testing.T, raw string) *ical.Calendar {
+		t.Helper()
+		cal, err := ical.NewDecoder(strings.NewReader(raw)).Decode()
+		if err != nil {
+			t.Fatalf("iCalendarデコード失敗: %v", err)
+		}
+		return cal
+	}
+
+	t.Run("actual newline", func(t *testing.T) {
+		raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-loc-nl-1\nSUMMARY:場所改行イベント\nDTSTART:20260301T090000\nDTEND:20260301T100000\nLOCATION:姫路市民会館\\n3F 会議室\nEND:VEVENT\nEND:VCALENDAR\n"
+		cal := decode(t, raw)
+
+		events := parseCalendarObject(cal, startDate, endDate, "family", "#0082c9")
+		if len(events) != 1 {
+			t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+		}
+
+		if events[0].event.Location != "姫路市民会館" {
+			t.Fatalf("LOCATION改行除去失敗(actual newline): got %q, want %q", events[0].event.Location, "姫路市民会館")
+		}
+	})
+
+	t.Run("escaped newline", func(t *testing.T) {
+		raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-loc-nl-2\nSUMMARY:場所改行イベント\nDTSTART:20260301T090000\nDTEND:20260301T100000\nLOCATION:姫路市民会館\\\\n3F 会議室\nEND:VEVENT\nEND:VCALENDAR\n"
+		cal := decode(t, raw)
+
+		events := parseCalendarObject(cal, startDate, endDate, "family", "#0082c9")
+		if len(events) != 1 {
+			t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+		}
+
+		if events[0].event.Location != "姫路市民会館" {
+			t.Fatalf("LOCATION改行除去失敗(escaped newline): got %q, want %q", events[0].event.Location, "姫路市民会館")
+		}
+	})
+}

@@ -72,6 +72,8 @@ func main() {
 
 	// assetsディレクトリを配信（JS/CSS/画像など）
 	router.Static("/assets", frontendDistPath+"/assets")
+	// weather-iconsディレクトリを配信（天気SVGアイコン）
+	router.Static("/weather-icons", frontendDistPath+"/weather-icons")
 
 	// ルートへのアクセスはindex.htmlを返す（SPA対応）
 	router.NoRoute(func(ctx *gin.Context) {

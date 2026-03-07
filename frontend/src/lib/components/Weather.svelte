@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { getWeather } from '../api.js';
 
+  const WEATHER_ICON_VERSION = '20260307';
+
   let weatherData = null;
   let error = null;
 
@@ -21,35 +23,39 @@
   /**
    * アイコンコードをローカルSVGパスに変換
    */
+  function withIconVersion(path) {
+    return `${path}?v=${WEATHER_ICON_VERSION}`;
+  }
+
   function getWeatherIconPath(iconCode) {
-    if (!iconCode) return '/weather-icons/unknown.svg';
+    if (!iconCode) return withIconVersion('/weather-icons/unknown.svg');
 
     const code = iconCode.substring(0, 2);
     switch (code) {
       case '01':
-        return '/weather-icons/clear.svg';
+        return withIconVersion('/weather-icons/clear.svg');
       case '02':
-        return '/weather-icons/partly-cloudy.svg';
+        return withIconVersion('/weather-icons/partly-cloudy.svg');
       case '03':
-        return '/weather-icons/cloudy.svg';
+        return withIconVersion('/weather-icons/cloudy.svg');
       case '09':
-        return '/weather-icons/drizzle.svg';
+        return withIconVersion('/weather-icons/drizzle.svg');
       case '10':
-        return '/weather-icons/rain.svg';
+        return withIconVersion('/weather-icons/rain.svg');
       case '11':
-        return '/weather-icons/heavy-rain.svg';
+        return withIconVersion('/weather-icons/heavy-rain.svg');
       case '12':
-        return '/weather-icons/shower.svg';
+        return withIconVersion('/weather-icons/shower.svg');
       case '13':
-        return '/weather-icons/snow.svg';
+        return withIconVersion('/weather-icons/snow.svg');
       case '14':
-        return '/weather-icons/blizzard.svg';
+        return withIconVersion('/weather-icons/blizzard.svg');
       case '15':
-        return '/weather-icons/thunder.svg';
+        return withIconVersion('/weather-icons/thunder.svg');
       case '50':
-        return '/weather-icons/fog.svg';
+        return withIconVersion('/weather-icons/fog.svg');
       default:
-        return '/weather-icons/unknown.svg';
+        return withIconVersion('/weather-icons/unknown.svg');
     }
   }
 
