@@ -235,8 +235,8 @@
   }
 
   .current-icon {
-    width: 5.2rem;
-    height: 5.2rem;
+    width: 7.8rem;
+    height: 7.8rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -336,8 +336,8 @@
   }
 
   .hourly-icon {
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 3.6rem;
+    height: 3.6rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -383,8 +383,8 @@
   }
 
   .weekly-icon {
-    width: 1.8rem;
-    height: 1.8rem;
+    width: 2.7rem;
+    height: 2.7rem;
     display: flex;
     align-items: center;
     justify-content: center;

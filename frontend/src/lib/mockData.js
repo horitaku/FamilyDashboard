@@ -236,7 +236,7 @@ function buildWeather() {
     location: '姫路市',
     current: {
       temperature: 12.3,
-      condition: '曇',
+      condition: 'くもり',
       icon: '03d',
       humidity: 62,
       windSpeed: 2.4,
@@ -244,7 +244,7 @@ function buildWeather() {
     today: {
       maxTemp: 14.0,
       minTemp: 7.2,
-      summary: 'くもり時々晴れ',
+      summary: 'くもりときどきはれ',
     },
     precipSlots: [
       { time: '06:00', probability: 10, icon: '01d' },

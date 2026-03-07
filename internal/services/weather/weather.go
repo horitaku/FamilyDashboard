@@ -254,29 +254,29 @@ func (c *Client) convertToWeatherResponse(omResp *OpenMeteoWeatherResponse, city
 func weatherCodeToCondition(code int) string {
 	switch code {
 	case 0:
-		return "晴"
+		return "はれ"
 	case 1, 2:
-		return "曇"
+		return "くもり"
 	case 3:
-		return "曇"
+		return "くもり"
 	case 45, 48:
-		return "霧"
+		return "きり"
 	case 51, 53, 55:
-		return "小雨"
+		return "こさめ"
 	case 61, 63, 65:
-		return "雨"
+		return "あめ"
 	case 71, 73, 75:
-		return "雪"
+		return "ゆき"
 	case 77:
-		return "吹雪"
+		return "ふぶき"
 	case 80, 81, 82:
-		return "激しい雨"
+		return "はげしいあめ"
 	case 85, 86:
-		return "にわか雨"
+		return "にわかあめ"
 	case 95, 96, 99:
-		return "雷雨"
+		return "らいう"
 	default:
-		return "天候不明"
+		return "てんこうふめい"
 	}
 }
 

@@ -33,13 +33,13 @@ type Client struct {
 
 ### WMO 天気コード変換
 
-- 0: 晴
-- 1, 2, 3: 曇
-- 45, 48: 霧
-- 51, 53, 55: 小雨
-- 61, 63, 65: 雨
-- 71, 73, 75: 雪
-- 95, 96, 99: 雷雨
+- 0: はれ
+- 1, 2, 3: くもり
+- 45, 48: きり
+- 51, 53, 55: こさめ
+- 61, 63, 65: あめ
+- 71, 73, 75: ゆき
+- 95, 96, 99: らいう
 
 ## API レスポンス例
 
@@ -48,7 +48,7 @@ type Client struct {
   "location": "姫路市",
   "current": {
     "temperature": 15.5,
-    "condition": "曇",
+    "condition": "くもり",
     "icon": "03d",
     "humidity": 65,
     "windSpeed": 3.2
@@ -56,7 +56,7 @@ type Client struct {
   "today": {
     "maxTemp": 20.0,
     "minTemp": 10.5,
-    "summary": "曇"
+    "summary": "くもり"
   },
   "precipSlots": [
     {"time": "09:00", "precip": 10},

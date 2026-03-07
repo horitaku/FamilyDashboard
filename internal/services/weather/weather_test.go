@@ -60,8 +60,8 @@ func TestConvertToWeatherResponse(t *testing.T) {
 		t.Errorf("Temperature: 期待: 15.5, 実際: %f", result.Current.Temperature)
 	}
 
-	if result.Current.Condition != "曇" {
-		t.Errorf("Condition: 期待: 曇, 実際: %s", result.Current.Condition)
+	if result.Current.Condition != "くもり" {
+		t.Errorf("Condition: 期待: くもり, 実際: %s", result.Current.Condition)
 	}
 
 	if result.Today.MaxTemp != 18.0 {
@@ -83,16 +83,16 @@ func TestWeatherCodeToCondition(t *testing.T) {
 		code     int
 		expected string
 	}{
-		{0, "晴"},
-		{1, "曇"},
-		{2, "曇"},
-		{3, "曇"},
-		{45, "霧"},
-		{48, "霧"},
-		{51, "小雨"},
-		{61, "雨"},
-		{71, "雪"},
-		{95, "雷雨"},
+		{0, "はれ"},
+		{1, "くもり"},
+		{2, "くもり"},
+		{3, "くもり"},
+		{45, "きり"},
+		{48, "きり"},
+		{51, "こさめ"},
+		{61, "あめ"},
+		{71, "ゆき"},
+		{95, "らいう"},
 	}
 
 	for _, test := range tests {
