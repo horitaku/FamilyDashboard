@@ -82,6 +82,19 @@
     return 0;
   }
 
+  function getHourlyHour(timeText) {
+    if (!timeText || typeof timeText !== 'string') return '--';
+    const [hour] = timeText.split(':');
+    return (hour || '--').padStart(2, '0');
+  }
+
+  function getHourlyMinute(timeText) {
+    if (!timeText || typeof timeText !== 'string') return ':--';
+    const parts = timeText.split(':');
+    const minute = parts.length > 1 ? parts[1] : '--';
+    return `:${minute}`;
+  }
+
   onMount(() => {
     loadWeatherData();
     // 5分ごとにリロード
@@ -146,7 +159,10 @@
         <div class="hourly-grid">
           {#each weatherData.precipSlots.slice(0, 8) as slot}
             <div class="hourly-slot">
-              <div class="hourly-time">{slot.time}</div>
+              <div class="hourly-time">
+                <span class="hourly-hour">{getHourlyHour(slot.time)}</span>
+                <span class="hourly-minute">{getHourlyMinute(slot.time)}</span>
+              </div>
               <div class="hourly-icon">
                 <img
                   src={getWeatherIconPath(slot.icon || weatherData.current?.icon || '')}
@@ -329,9 +345,21 @@
   }
 
   .hourly-time {
-    font-size: 1.275rem;
-    opacity: 0.85;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 1px;
+    opacity: 0.9;
     font-weight: 600;
+  }
+
+  .hourly-hour {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .hourly-minute {
+    font-size: 1.1rem;
+    line-height: 1;
   }
 
   .hourly-icon {
