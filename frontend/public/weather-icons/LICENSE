@@ -1,0 +1,21 @@
+FamilyDashboard Weather Icons License
+
+This directory contains original SVG icon files created for the FamilyDashboard project.
+No third-party icon files are included in this directory.
+
+Files in this directory:
+- clear.svg
+- partly-cloudy.svg
+- cloudy.svg
+- drizzle.svg
+- rain.svg
+- heavy-rain.svg
+- shower.svg
+- snow.svg
+- blizzard.svg
+- thunder.svg
+- fog.svg
+- unknown.svg
+
+Usage:
+These icons are intended for use within this repository and its deployments.

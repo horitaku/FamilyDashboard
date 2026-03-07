@@ -19,32 +19,37 @@
   }
 
   /**
-   * ウェザーアイコンを絵文字で表示
+   * アイコンコードをローカルSVGパスに変換
    */
-  function getWeatherEmoji(iconCode) {
-    // WMO天気コードとアイコン形式（01d など）で判定
-    if (!iconCode) return '🌡️';
-    
+  function getWeatherIconPath(iconCode) {
+    if (!iconCode) return '/weather-icons/unknown.svg';
+
     const code = iconCode.substring(0, 2);
     switch (code) {
       case '01':
-        return '☀️'; // 晴・clear
+        return '/weather-icons/clear.svg';
       case '02':
-        return '🌤️'; // 薄曇・partly cloudy
+        return '/weather-icons/partly-cloudy.svg';
       case '03':
-      case '04':
-        return '☁️'; // 曇り・cloudy
+        return '/weather-icons/cloudy.svg';
       case '09':
+        return '/weather-icons/drizzle.svg';
       case '10':
-        return '🌧️'; // 雨・rain
+        return '/weather-icons/rain.svg';
       case '11':
-        return '⛈️'; // 雷雨・thunderstorm
+        return '/weather-icons/heavy-rain.svg';
+      case '12':
+        return '/weather-icons/shower.svg';
       case '13':
-        return '❄️'; // 雪・snow
+        return '/weather-icons/snow.svg';
+      case '14':
+        return '/weather-icons/blizzard.svg';
+      case '15':
+        return '/weather-icons/thunder.svg';
       case '50':
-        return '🌫️'; // 霧・mist
+        return '/weather-icons/fog.svg';
       default:
-        return '🌡️';
+        return '/weather-icons/unknown.svg';
     }
   }
 
@@ -85,7 +90,13 @@
   {:else if weatherData}
     <div class="current-block">
       <div class="current-main">
-        <div class="current-icon">{getWeatherEmoji(weatherData.current?.icon || '')}</div>
+        <div class="current-icon">
+          <img
+            src={getWeatherIconPath(weatherData.current?.icon || '')}
+            alt={weatherData.current?.condition || '天気アイコン'}
+            loading="lazy"
+          />
+        </div>
         <div class="current-text">
           <div class="current-condition">{weatherData.current?.condition || '---'}</div>
           <div class="current-location">{weatherData.location || ''}</div>
@@ -131,7 +142,11 @@
             <div class="hourly-slot">
               <div class="hourly-time">{slot.time}</div>
               <div class="hourly-icon">
-                {getWeatherEmoji(slot.icon || weatherData.current?.icon || '')}
+                <img
+                  src={getWeatherIconPath(slot.icon || weatherData.current?.icon || '')}
+                  alt="時間帯の天気アイコン"
+                  loading="lazy"
+                />
               </div>
               <div class="hourly-precip">{getPrecipValue(slot)}%</div>
             </div>
@@ -146,7 +161,13 @@
           {#each weatherData.weekly.slice(0, 7) as day}
             <div class="weekly-item">
               <div class="weekly-day">{formatWeekday(day.date)}</div>
-              <div class="weekly-icon">{getWeatherEmoji(day.icon || '')}</div>
+              <div class="weekly-icon">
+                <img
+                  src={getWeatherIconPath(day.icon || '')}
+                  alt="週間天気アイコン"
+                  loading="lazy"
+                />
+              </div>
               <div class="weekly-temps">
                 <span class="weekly-max">{Math.round(day.maxTemp || 0)}°</span>
                 <span class="weekly-min">{Math.round(day.minTemp || 0)}°</span>
@@ -208,8 +229,17 @@
   }
 
   .current-icon {
-    font-size: 5.2rem;
-    line-height: 1;
+    width: 5.2rem;
+    height: 5.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .current-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .current-text {
@@ -300,7 +330,17 @@
   }
 
   .hourly-icon {
-    font-size: 2.4rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hourly-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .hourly-precip {
@@ -337,7 +377,17 @@
   }
 
   .weekly-icon {
-    font-size: 1.8rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .weekly-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .weekly-temps {

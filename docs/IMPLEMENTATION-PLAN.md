@@ -26,6 +26,7 @@
   - [ ] 12.5. API ドキュメント化（Swagger/OpenAPI）
   - [ ] 12.6. ロギング強化（構造化ログ）
   - [ ] 12.7. ヘルスチェック API 改善
+  - [x] 12.8. 天気アイコン画像化（フォント依存解消）
 - [x] 13. GoogleからNextcloudへの移行計画
 - [x] 14. Nextcloud CalDAVクライアント実装
 - [x] 15. Nextcloud WebDAVタスク実装
@@ -60,6 +61,7 @@
 | 12.5. API ドキュメント | | | | 未実装 | Swagger/OpenAPI仕様書作成、UI生成 |
 | 12.6. ロギング強化 | | | | 未実装 | 構造化ログ導入（JSON形式）、ファイル出力 |
 | 12.7. ヘルスチェック改善 | | | | 未実装 | キオスク監視、詳細な状態情報反映 |
+| 12.8. 天気アイコン画像化 | アーニャ | 2026-03-07 | 2026-03-07 | 完了 | ローカルSVGアイコン導入、Weather.svelteをimg表示に置換、ライセンス情報追加、ビルド確認 ✓ |
 | 13. Nextcloud移行計画 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | GoogleからNextcloudへの移行計画作成、CalDAV/WebDAV仕様調査完了 |
 | 14. CalDAVクライアント実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud CalDAVクライアント、カレンダーイベント取得、iCalendarパース、ユニットテスト全PASS、handlers統合、ビルド成功✓ |
 | 15. WebDAVタスク実装 | アーニャ | 2026-02-28 | 2026-02-28 | 完了 | Nextcloud WebDAV/CalDAVでタスク（VTODO）取得、3段階ソート実装、キャッシュ統合、ユニットテスト全PASS ✓ |
@@ -302,7 +304,7 @@
 
 ### 12. 追加・改善・リファクタリング
 - 目的: コード品質向上・自動化・ドキュメント整備で、長期運用を堅牢にするます🥜
-- 完了条件: 全改善サブタスク（12.1〜12.7）が実装され、CI/テスト/ロギングが正常に動作するます
+- 完了条件: 全改善サブタスク（12.1〜12.8）が実装され、CI/テスト/ロギング/表示安定化が正常に動作するます
 - 実施内容:
   - CI パイプライン構築（GitHub Actions）
   - 静的解析導入（golangci-lint）
@@ -310,6 +312,7 @@
   - API ドキュメント化（Swagger）
   - ロギング強化（構造化ログ）
   - ヘルスチェック API 改善
+  - 天気アイコン画像化（SVG化・ライセンス管理・WMOマッピング）
   - 各改善の検証・統合テスト
 - 進捗: 未実装
 
@@ -524,16 +527,41 @@
   - ファイル: `internal/handlers/health.go` 新規作成、routes に登録
 - 進捗: 未実装
 
+### 12.8. 天気アイコン画像化（フォント依存解消）
+- 目的: 天気表示の機種依存（フォント/絵文字差異）をなくして、キオスク端末で見た目を安定化するます
+- 完了条件: `Weather.svelte` が絵文字ではなくローカルSVGを表示し、主要天気コードで期待どおり描画されるます
+- 実施内容:
+  - アイコンセット選定（MITライセンス優先: Meteocons / Tabler Icons / Iconoir から1つ採用）
+  - `frontend/public/weather-icons/` に必要アイコンを配置（最低12種）
+    - 対象コード: `01d, 02d, 03d, 09d, 10d, 11d, 12d, 13d, 14d, 15d, 50d, 04u`
+  - `frontend/src/lib/components/Weather.svelte` の `getWeatherEmoji()` を `getWeatherIconPath()` に置換
+  - current / hourly / weekly の3表示すべてを `<img>` ベースに統一
+  - フォールバック実装（未定義コードは `unknown.svg`）
+  - ライセンス表示を追加
+    - `frontend/public/weather-icons/LICENSE`
+    - ルートに `THIRD_PARTY_LICENSES.md` を作成し、出典URLとライセンスを明記
+  - モックデータ表示確認（`frontend/src/lib/mockData.js`）と実API表示確認（`/api/weather`）
+  - 視認性確認（FHD/2m想定）
+- 進捗: 完了✨ （2026-03-07）
+  - [x] `frontend/public/weather-icons/` にローカルSVG 12種を追加
+  - [x] `frontend/src/lib/components/Weather.svelte` を絵文字表示から `<img>` 表示へ置換
+  - [x] current / hourly / weekly の全表示で同一マッピングを適用
+  - [x] 未定義コードのフォールバック（`unknown.svg`）を実装
+  - [x] `frontend/public/weather-icons/LICENSE` を追加
+  - [x] `THIRD_PARTY_LICENSES.md` を追加（第三者アイコン依存なしを明記）
+  - [x] `npm run build` でフロントエンドビルド確認
+
 ---
 
 ## 12の統合テスト・検証計画
-- 全サブタスク（12.1〜12.7）完了後、以下を実施:
+- 全サブタスク（12.1〜12.8）完了後、以下を実施:
   1. CI の全パイプラインが正常に動作するか確認
   2. E2E テストが全シナリオで PASS するか確認
   3. Swagger UI ですべての API が表示されるか確認
   4. ログファイルが正しく出力されているか確認
   5. ヘルスチェック API がすべてのステータスを返すか確認
-  6. Raspberry Pi 環境（docker）で全機能が動作するか確認 
+  6. 天気アイコンが環境差なしで同一表示になるか確認（Pi5/Pi Zero 2 W）
+  7. Raspberry Pi 環境（docker）で全機能が動作するか確認 
 
 ### 13. GoogleからNextcloudへの移行計画
 - 目的: GoogleカレンダーとTasksをNextcloudのCalDAV/WebDAVに完全移行するます🥜
