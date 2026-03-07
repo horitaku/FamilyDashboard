@@ -56,6 +56,7 @@ type Event struct {
 	End      string `json:"end"`         // 終了時刻（RFC3339 または YYYY-MM-DD）
 	Color    string `json:"color"`       // 色コード（#RRGGBB など）
 	Calendar string `json:"calendar"`    // カレンダー名
+	Location string `json:"location"`    // 場所（省略可）
 	Desc     string `json:"description"` // 説明（省略可）
 }
 

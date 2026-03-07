@@ -68,7 +68,7 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 				Comps: []caldav.CalendarCompRequest{
 					{
 						Name:  "VEVENT",
-						Props: []string{"UID", "SUMMARY", "DTSTART", "DTEND", "DESCRIPTION", "COLOR"},
+						Props: []string{"UID", "SUMMARY", "DTSTART", "DTEND", "DESCRIPTION", "LOCATION", "COLOR"},
 					},
 				},
 			},
@@ -76,7 +76,7 @@ func (c *Client) GetCalendarEvents(ctx context.Context) (*models.CalendarRespons
 				Name: "VCALENDAR",
 				Comps: []caldav.CompFilter{
 					{
-						Name: "VEVENT",
+						Name:  "VEVENT",
 						Start: startDate,
 						End:   endDate,
 					},
@@ -238,6 +238,7 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time, calen
 		dtStart := comp.Props.Get("DTSTART")
 		dtEnd := comp.Props.Get("DTEND")
 		description := comp.Props.Get("DESCRIPTION")
+		location := comp.Props.Get("LOCATION")
 		color := comp.Props.Get("COLOR")
 
 		if uid == nil || summary == nil || dtStart == nil {
@@ -282,11 +283,15 @@ func parseCalendarObject(cal *ical.Calendar, startDate, endDate time.Time, calen
 			Start:    startTime.Format(time.RFC3339),
 			End:      endTime.Format(time.RFC3339),
 			Color:    colorValue,
-				Calendar: calendarName,
+			Calendar: calendarName,
+			Location: "",
 			Desc:     "",
 		}
 		if description != nil {
 			event.Desc = description.Value
+		}
+		if location != nil {
+			event.Location = strings.TrimSpace(location.Value)
 		}
 
 		events = append(events, eventWithDate{

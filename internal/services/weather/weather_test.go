@@ -12,6 +12,18 @@ func TestConvertToWeatherResponse(t *testing.T) {
 	fc := cache.New("./data/cache")
 	c := NewClient(fc, "http://localhost:8080")
 
+	jst := time.FixedZone("Asia/Tokyo", 9*3600)
+	now := time.Now().In(jst)
+	today := now.Format("2006-01-02")
+
+	hourlyTimes := make([]string, 0, 8)
+	hourlyPrecip := make([]int, 0, 8)
+	for i := 1; i <= 8; i++ {
+		t := now.Add(time.Duration(i*3) * time.Hour)
+		hourlyTimes = append(hourlyTimes, t.Format("2006-01-02T15:04"))
+		hourlyPrecip = append(hourlyPrecip, 10)
+	}
+
 	// ダミー Open-Meteo レスポンスを作成するます
 	dummyResp := &OpenMeteoWeatherResponse{
 		Latitude:  34.815,
@@ -24,15 +36,15 @@ func TestConvertToWeatherResponse(t *testing.T) {
 			Time:             time.Now().Format(time.RFC3339),
 		},
 		Daily: OpenMeteoDailyData{
-			Time:              []string{"2026-02-14"},
+			Time:              []string{today},
 			MaxTemperature:    []float64{18.0},
 			MinTemperature:    []float64{10.0},
 			PrecipitationProb: []int{15},
 			WeatherCode:       []int{2},
 		},
 		Hourly: OpenMeteoHourlyData{
-			Time:              []string{"2026-02-14T00:00", "2026-02-14T03:00", "2026-02-14T06:00", "2026-02-14T09:00", "2026-02-14T12:00", "2026-02-14T15:00", "2026-02-14T18:00", "2026-02-14T21:00"},
-			PrecipitationProb: []int{10, 15, 20, 10, 5, 0, 5, 10},
+			Time:              hourlyTimes,
+			PrecipitationProb: hourlyPrecip,
 		},
 	}
 

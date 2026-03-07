@@ -96,43 +96,43 @@ func TestParseDateTime(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Tokyo")
 
 	tests := []struct {
-		name      string
-		input     string
+		name       string
+		input      string
 		wantAllDay bool
-		wantError bool
+		wantError  bool
 	}{
 		{
-			name:      "終日イベント",
-			input:     "20260228",
+			name:       "終日イベント",
+			input:      "20260228",
 			wantAllDay: true,
-			wantError: false,
+			wantError:  false,
 		},
 		{
-			name:      "時間指定イベント",
-			input:     "20260228T143000",
+			name:       "時間指定イベント",
+			input:      "20260228T143000",
 			wantAllDay: false,
-			wantError: false,
+			wantError:  false,
 		},
 		{
-			name:      "UTC時間",
-			input:     "20260228T143000Z",
+			name:       "UTC時間",
+			input:      "20260228T143000Z",
 			wantAllDay: false,
-			wantError: false,
+			wantError:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, isAllDay := parseDateTime(tt.input, loc)
-			
+
 			if tt.wantError && !result.IsZero() {
 				t.Errorf("エラーが期待されましたがパース成功しました: %v", result)
 			}
-			
+
 			if !tt.wantError && result.IsZero() {
 				t.Errorf("パース失敗しました: %s", tt.input)
 			}
-			
+
 			if !tt.wantError && isAllDay != tt.wantAllDay {
 				t.Errorf("allDay 不一致: got %v, want %v", isAllDay, tt.wantAllDay)
 			}
@@ -145,7 +145,7 @@ func TestSortTasks(t *testing.T) {
 	// テストタスクを作成
 	dueDate1 := "2026-03-01"
 	dueDate2 := "2026-03-05"
-	
+
 	tasks := []models.TaskItem{
 		{
 			ID:        "task1",
@@ -373,10 +373,10 @@ func TestGetTaskListNames(t *testing.T) {
 // TestNormalizeHexColor は色コード正規化のテストなのです。
 func TestNormalizeHexColor(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		want     string
-		wantOK   bool
+		name   string
+		input  string
+		want   string
+		wantOK bool
 	}{
 		{name: "RRGGBB", input: "#0082c9", want: "#0082C9", wantOK: true},
 		{name: "RRGGBBAA", input: "#0082c9ff", want: "#0082C9", wantOK: true},
@@ -455,4 +455,26 @@ func TestParseCalendarObjectColorPrecedence(t *testing.T) {
 			t.Fatalf("デフォルト色フォールバック失敗: got %s, want %s", events[0].event.Color, "#3788d8")
 		}
 	})
+}
+
+// TestParseCalendarObjectLocation は VEVENT の LOCATION をイベント場所として取得できるかのテストなのです。
+func TestParseCalendarObjectLocation(t *testing.T) {
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	startDate := time.Date(2026, 2, 28, 0, 0, 0, 0, loc)
+	endDate := startDate.AddDate(0, 0, 7)
+
+	raw := "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:evt-loc-1\nSUMMARY:場所ありイベント\nDTSTART:20260301T090000\nDTEND:20260301T100000\nLOCATION:姫路市民会館\nEND:VEVENT\nEND:VCALENDAR\n"
+	cal, err := ical.NewDecoder(strings.NewReader(raw)).Decode()
+	if err != nil {
+		t.Fatalf("iCalendarデコード失敗: %v", err)
+	}
+
+	events := parseCalendarObject(cal, startDate, endDate, "family", "#0082c9")
+	if len(events) != 1 {
+		t.Fatalf("イベント数不一致: got %d, want 1", len(events))
+	}
+
+	if events[0].event.Location != "姫路市民会館" {
+		t.Fatalf("LOCATION取得失敗: got %q, want %q", events[0].event.Location, "姫路市民会館")
+	}
 }
