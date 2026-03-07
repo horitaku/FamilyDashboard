@@ -47,6 +47,7 @@ function buildCalendarDays() {
       day.allDay.push({
         id: 'ad-1',
         title: '家族会議',
+        location: 'リビング',
         start: ymd,
         end: ymd,
         color: '#60a5fa',
@@ -55,6 +56,7 @@ function buildCalendarDays() {
       day.timed.push({
         id: 't-1',
         title: '保育園お迎え',
+        location: 'ひまわり保育園',
         start: formatTokyoDateTime(date, 17, 30),
         end: formatTokyoDateTime(date, 18, 0),
         color: '#34d399',
@@ -66,6 +68,7 @@ function buildCalendarDays() {
       day.timed.push({
         id: 't-2',
         title: '買い出し',
+        location: 'イオンモール姫路大津',
         start: formatTokyoDateTime(date, 10, 0),
         end: formatTokyoDateTime(date, 11, 0),
         color: '#fbbf24',
@@ -74,6 +77,7 @@ function buildCalendarDays() {
       day.timed.push({
         id: 't-3',
         title: 'オンライン面談',
+        location: 'Zoom',
         start: formatTokyoDateTime(date, 20, 0),
         end: formatTokyoDateTime(date, 20, 30),
         color: '#f87171',
@@ -85,6 +89,7 @@ function buildCalendarDays() {
       day.allDay.push({
         id: 'ad-2',
         title: '通院',
+        location: '姫路市民病院',
         start: ymd,
         end: ymd,
         color: '#a78bfa',
@@ -96,6 +101,7 @@ function buildCalendarDays() {
       day.timed.push({
         id: 't-4',
         title: '習い事',
+        location: '市民体育館',
         start: formatTokyoDateTime(date, 16, 0),
         end: formatTokyoDateTime(date, 17, 0),
         color: '#fb7185',

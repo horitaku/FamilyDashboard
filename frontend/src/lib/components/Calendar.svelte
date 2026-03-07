@@ -10,6 +10,7 @@
 
   let calendarData = null;
   let error = null;
+  let now = new Date();
 
   /**
    * カレンダーデータを取得
@@ -29,7 +30,13 @@
    */
   function filterDays(days) {
     if (!days) return [];
-    return days.slice(skipDays, skipDays + daysToShow);
+
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayIndex = days.findIndex((day) => day.date === todayKey);
+    const baseIndex = todayIndex >= 0 ? todayIndex : 0;
+    const startIndex = baseIndex + skipDays;
+
+    return days.slice(startIndex, startIndex + daysToShow);
   }
 
   /**
@@ -87,9 +94,25 @@
 
   onMount(() => {
     loadCalendarData();
+
+    // 日時を定期更新し、日付またぎで表示日を切り替える
+    const nowInterval = setInterval(() => {
+      const previousDateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      now = new Date();
+      const currentDateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+      if (previousDateKey !== currentDateKey) {
+        loadCalendarData();
+      }
+    }, 60000);
+
     // 5分ごとにリロード
-    const interval = setInterval(loadCalendarData, 300000);
-    return () => clearInterval(interval);
+    const dataInterval = setInterval(loadCalendarData, 300000);
+
+    return () => {
+      clearInterval(nowInterval);
+      clearInterval(dataInterval);
+    };
   });
 </script>
 
@@ -116,7 +139,12 @@
                     {#if showDate}
                       <span class="event-date">{formatShortDate(day.date)}</span>
                     {/if}
-                    <span class="event-title">{event.title}</span>
+                    <span class="event-title">
+                      <span>{event.title}</span>
+                      {#if event.location}
+                        <span class="event-location">@{event.location}</span>
+                      {/if}
+                    </span>
                   </div>
                 {/each}
               </div>
@@ -132,7 +160,12 @@
                       <span class="time-start">{formatTime(event.start)}</span>
                       <span class="time-end">{formatTime(event.end)}</span>
                     </span>
-                    <span class="event-title">{event.title}</span>
+                    <span class="event-title">
+                      <span>{event.title}</span>
+                      {#if event.location}
+                        <span class="event-location">@{event.location}</span>
+                      {/if}
+                    </span>
                   </div>
                 {/each}
               </div>
@@ -260,5 +293,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .event-location {
+    margin-left: 8px;
+    font-size: 0.8em;
+    color: #6b7280;
   }
 </style>
